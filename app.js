@@ -1,59 +1,95 @@
-const svg = d3.select("svg");
-const width = +svg.attr("width");
-const height = +svg.attr("height");
-const margin = { top: 10, right: 10, bottom: 20, left: 40 };
-const plotWidth = width - margin.left - margin.right;
-const plotHeight = height - margin.top - margin.bottom;
-const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+const PARAMETERS = {
+  'Solar8000/HR': 'Heart Rate',
+  'Solar8000/ART_MBP': 'Arterial BP',
+  'Solar8000/PLETH_SPO2': 'Oxygen Saturation',
+  'Solar8000/ETCO2': 'End-Tidal CO2',
+  'Solar8000/RR': 'Respiratory Rate',
+  'Solar8000/PLETH_HR': 'Pleth HR',
+  'Solar8000/ART_SBP': 'Systolic BP',
+  'Solar8000/ART_DBP': 'Diastolic BP',
+  'Solar8000/NIBP_MBP': 'NIBP Mean BP',
+  'Solar8000/CVP': 'Central Venous Pressure',
+  'Vigileo/CO': 'Cardiac Output',
+  'Vigileo/SV': 'Stroke Volume',
+  'Vigilance/HR_AVG': 'Average HR',
+  'CardioQ/HR': 'CardioQ HR'
+};
 
-let timer = null;
-const duration = 60000; // 1 minute total
-const interval = 100; // ms per frame
+const svgWidth = 1000, svgHeight = 400;
+const margin = { top: 30, right: 20, bottom: 30, left: 50 };
+const plotWidth = svgWidth - margin.left - margin.right;
+const plotHeight = svgHeight - margin.top - margin.bottom;
+const color = d3.scaleOrdinal(d3.schemeCategory10);
 
-document.getElementById("start").addEventListener("click", () => {
-  const caseid = document.getElementById("caseid").value;
-  if (!caseid) return alert("Select a case ID.");
+let fullData = {}, currentBins = [];
 
-  fetch(`https://api.vitaldb.net/trks?caseid=${caseid}`)
-    .then(res => res.json())
-    .then(tracks => {
-      console.log("Tracks:", tracks);
-      const ekgTrack = tracks.find(t => t.tname === "SNUADC/ECG_II");
-      if (!ekgTrack) return alert("No ECG data for this case.");
+const svg = d3.select("#chart").append("svg")
+  .attr("width", svgWidth)
+  .attr("height", svgHeight);
 
-      fetch(`https://api.vitaldb.net/${ekgTrack.tid}`)
-        .then(res => res.text())
-        .then(text => {
-          const data = text.trim().split("\n").map(row => {
-            const [time, value] = row.split(',').map(parseFloat);
-            return { time, value };
-          }).filter(d => !isNaN(d.time) && !isNaN(d.value));
+const plot = svg.append("g")
+  .attr("transform", `translate(${margin.left},${margin.top})`);
 
-          if (data.length === 0) return alert("No valid EKG data found.");
+const xScale = d3.scaleLinear().range([0, plotWidth]);
+const yScale = d3.scaleLinear().range([plotHeight, 0]);
+const xAxis = plot.append("g").attr("transform", `translate(0,${plotHeight})`);
+const yAxis = plot.append("g");
 
-          const valueExtent = d3.extent(data, d => d.value);
-          const scaleTime = d3.scaleLinear().domain([0, 10]).range([0, plotWidth]);
-          const scaleValue = d3.scaleLinear().domain(valueExtent).range([plotHeight, 0]);
+const line = d3.line()
+  .x(d => xScale(d.time))
+  .y(d => yScale(d.value));
 
-          g.selectAll("*").remove();
-          const path = g.append("path").attr("fill", "none").attr("stroke", "red");
+document.getElementById("caseid").addEventListener("change", async (e) => {
+  const caseid = e.target.value;
+  if (!caseid) return;
 
-          let startTime = 0;
-          let frame = 0;
+  const trks = await fetch(`https://api.vitaldb.net/trks?caseid=${caseid}`).then(res => res.json());
+  const matched = trks.filter(t => PARAMETERS[t.tname]);
 
-          timer = setInterval(() => {
-            const segment = data.filter(d => d.time >= startTime && d.time < startTime + 10);
-            const line = d3.line()
-              .x(d => scaleTime(d.time - startTime))
-              .y(d => scaleValue(d.value));
+  const promises = matched.map(async t => {
+    const text = await fetch(`https://api.vitaldb.net/${t.tid}`).then(r => r.text());
+    const values = text.trim().split("\n").map(row => {
+      const [time, value] = row.split(',').map(parseFloat);
+      return { time, value };
+    }).filter(d => !isNaN(d.time) && !isNaN(d.value));
+    return { label: PARAMETERS[t.tname], data: values };
+  });
 
-            path.datum(segment).attr("d", line);
-            document.getElementById("clock").textContent = `Time: ${Math.round(startTime)}s`;
-
-            startTime += 0.5;
-            frame += interval;
-            if (frame >= duration || startTime >= d3.max(data, d => d.time)) clearInterval(timer);
-          }, interval);
-        });
-    });
+  const results = await Promise.all(promises);
+  fullData = Object.fromEntries(results.map(d => [d.label, d.data]));
+  currentBins = Array.from(new Set(results.flatMap(d => d.data.map(p => Math.floor(p.time))))).sort((a, b) => a - b);
+  document.getElementById("slider").max = currentBins.length - 1;
+  updateChart(currentBins[0]);
 });
+
+document.getElementById("slider").addEventListener("input", (e) => {
+  const time = currentBins[+e.target.value];
+  updateChart(time);
+});
+
+function updateChart(timeBin) {
+  document.getElementById("timeDisplay").textContent = `Time: ${timeBin}s`;
+
+  const displayData = Object.entries(fullData).map(([label, arr]) => {
+    const points = arr.filter(d => Math.floor(d.time) === timeBin);
+    return points.length ? { label, data: points } : null;
+  }).filter(Boolean);
+
+  const allValues = displayData.flatMap(d => d.data.map(p => p.value));
+  if (!allValues.length) return;
+
+  xScale.domain([timeBin, timeBin + 1]);
+  yScale.domain([d3.min(allValues), d3.max(allValues)]);
+
+  xAxis.call(d3.axisBottom(xScale));
+  yAxis.call(d3.axisLeft(yScale));
+
+  const paths = plot.selectAll("path").data(displayData, d => d.label);
+  paths.enter().append("path")
+    .merge(paths)
+    .attr("fill", "none")
+    .attr("stroke", d => color(d.label))
+    .attr("d", d => line(d.data));
+
+  paths.exit().remove();
+}
