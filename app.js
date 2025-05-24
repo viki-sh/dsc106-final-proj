@@ -17,6 +17,7 @@ document.getElementById("start").addEventListener("click", () => {
   fetch(`https://api.vitaldb.net/trks?caseid=${caseid}`)
     .then(res => res.json())
     .then(tracks => {
+      console.log("Tracks:", tracks);
       const ekgTrack = tracks.find(t => t.tname === "SNUADC/ECG_II");
       if (!ekgTrack) return alert("No ECG data for this case.");
 
@@ -28,9 +29,11 @@ document.getElementById("start").addEventListener("click", () => {
             return { time, value };
           }).filter(d => !isNaN(d.time) && !isNaN(d.value));
 
-          const maxTime = d3.max(data, d => d.time);
+          if (data.length === 0) return alert("No valid EKG data found.");
+
+          const valueExtent = d3.extent(data, d => d.value);
           const scaleTime = d3.scaleLinear().domain([0, 10]).range([0, plotWidth]);
-          const scaleValue = d3.scaleLinear().domain([-2, 2]).range([plotHeight, 0]);
+          const scaleValue = d3.scaleLinear().domain(valueExtent).range([plotHeight, 0]);
 
           g.selectAll("*").remove();
           const path = g.append("path").attr("fill", "none").attr("stroke", "red");
@@ -49,7 +52,7 @@ document.getElementById("start").addEventListener("click", () => {
 
             startTime += 0.5;
             frame += interval;
-            if (frame >= duration || startTime >= maxTime) clearInterval(timer);
+            if (frame >= duration || startTime >= d3.max(data, d => d.time)) clearInterval(timer);
           }, interval);
         });
     });
