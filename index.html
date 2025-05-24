@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Live EKG Viewer</title>
+  <title>Vitals Viewer</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
@@ -18,11 +18,11 @@
       <option>266</option><option>279</option><option>323</option><option>375</option><option>384</option>
       <option>413</option><option>416</option><option>458</option><option>460</option><option>478</option>
     </select>
-    <button id="start">Start</button>
+    <input type="range" id="slider" min="0" value="0" step="1">
+    <span id="timeDisplay">Time: 0s</span>
   </div>
 
-  <div id="clock">Time: 0s</div>
-  <svg width="800" height="200"></svg>
+  <div id="chart"></div>
 
   <script src="app.js"></script>
 </body>

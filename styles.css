@@ -7,9 +7,9 @@ body {
   margin-bottom: 1rem;
 }
 
-#clock {
-  font-size: 1.5rem;
-  margin: 1rem 0;
+#timeDisplay {
+  font-weight: bold;
+  margin-left: 1rem;
 }
 
 svg {
