@@ -45,19 +45,39 @@ document.getElementById("caseid").addEventListener("change", async (e) => {
 
   const trks = await fetch(`https://api.vitaldb.net/trks?caseid=${caseid}`).then(res => res.json());
   const matched = trks.filter(t => PARAMETERS[t.tname]);
+  console.log("Matched tracks:", matched.map(m => m.tname));
+
+  if (!matched.length) {
+    alert("No matching vitals found for this case.");
+    return;
+  }
 
   const promises = matched.map(async t => {
+    console.log("Loading:", t.tname, t.tid);
     const text = await fetch(`https://api.vitaldb.net/${t.tid}`).then(r => r.text());
     const values = text.trim().split("\n").map(row => {
       const [time, value] = row.split(',').map(parseFloat);
       return { time, value };
     }).filter(d => !isNaN(d.time) && !isNaN(d.value));
+
+    if (!values.length) console.warn("No data for", t.tname);
     return { label: PARAMETERS[t.tname], data: values };
   });
 
-  const results = await Promise.all(promises);
+  const results = (await Promise.all(promises)).filter(d => d.data.length);
+  if (!results.length) {
+    alert("No vital data loaded.");
+    return;
+  }
+
   fullData = Object.fromEntries(results.map(d => [d.label, d.data]));
   currentBins = Array.from(new Set(results.flatMap(d => d.data.map(p => Math.floor(p.time))))).sort((a, b) => a - b);
+
+  if (!currentBins.length) {
+    alert("No valid time bins available.");
+    return;
+  }
+
   document.getElementById("slider").max = currentBins.length - 1;
   updateChart(currentBins[0]);
 });
