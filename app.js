@@ -48,21 +48,30 @@ document.getElementById("caseid").addEventListener("change", async (e) => {
     .then(text => d3.csvParse(text));
 
   const matched = trks.filter(t => PARAMETERS[t.tname]);
-  const promises = matched.map(async t => {
-    const text = await fetch(`https://api.vitaldb.net/${t.tid}`).then(r => r.text());
-    const values = text.trim().split("\n").map(row => {
-      const [time, value] = row.split(',').map(parseFloat);
-      return { time, value };
-    }).filter(d => !isNaN(d.time) && !isNaN(d.value));
-    return { label: PARAMETERS[t.tname], data: values };
-  });
+  const results = [];
 
-  const results = (await Promise.all(promises)).filter(d => d.data.length);
+  for (const t of matched) {
+    console.log("Loading:", t.tname, t.tid);
+    try {
+      const text = await fetch(`https://api.vitaldb.net/${t.tid}`).then(r => r.text());
+      const values = text.trim().split("\n").map(row => {
+        const [time, value] = row.split(',').map(parseFloat);
+        return { time, value };
+      }).filter(d => !isNaN(d.time) && !isNaN(d.value));
+
+      if (values.length) results.push({ label: PARAMETERS[t.tname], data: values });
+    } catch (err) {
+      console.warn("Error fetching", t.tname, err);
+    }
+
+    await new Promise(r => setTimeout(r, 150)); // throttle
+  }
+
   fullData = Object.fromEntries(results.map(d => [d.label, d.data]));
   currentBins = Array.from(new Set(results.flatMap(d => d.data.map(p => Math.floor(p.time))))).sort((a, b) => a - b);
 
   if (!currentBins.length) {
-    alert("No valid time bins available.");
+    alert("No valid data loaded.");
     return;
   }
 
@@ -92,7 +101,6 @@ function updateChart(timeBin) {
   xAxis.call(d3.axisBottom(xScale));
   yAxis.call(d3.axisLeft(yScale));
 
-  // Update chart lines
   const paths = plot.selectAll("path").data(displayData, d => d.label);
   paths.enter().append("path")
     .merge(paths)
@@ -102,16 +110,15 @@ function updateChart(timeBin) {
 
   paths.exit().remove();
 
-  // Update legend
+  // Legend
   const legend = d3.select("#legend").html("");
   displayData.forEach(d => {
     legend.append("div")
       .style("color", color(d.label))
-      .style("margin", "2px 0")
       .text(d.label);
   });
 
-  // Tooltip circles
+  // Tooltip
   plot.selectAll("circle").remove();
   displayData.forEach(d => {
     plot.selectAll(`.dot-${d.label}`)
