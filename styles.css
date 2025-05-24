@@ -1,25 +1,31 @@
 body {
-  font-family: sans-serif;
-  padding: 2rem;
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+    color: #333;
 }
 
-#controls {
-  margin-bottom: 1rem;
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-#timeDisplay {
-  font-weight: bold;
-  margin-left: 1rem;
+label {
+    display: block;
+    margin-top: 20px;
+    font-weight: bold;
 }
 
-svg {
-  border: 1px solid #ccc;
+select, input[type="range"] {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
 }
 
-#legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 10px;
-  font-size: 0.9rem;
+#chart {
+    margin-top: 30px;
 }
