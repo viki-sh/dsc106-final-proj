@@ -15,3 +15,11 @@ body {
 svg {
   border: 1px solid #ccc;
 }
+
+#legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+}

@@ -43,33 +43,21 @@ document.getElementById("caseid").addEventListener("change", async (e) => {
   const caseid = e.target.value;
   if (!caseid) return;
 
-  const trks = await fetch(`https://api.vitaldb.net/trks?caseid=${caseid}`).then(res => res.json());
+  const trks = await fetch(`https://api.vitaldb.net/trks?caseid=${caseid}`)
+    .then(res => res.text())
+    .then(text => d3.csvParse(text));
+
   const matched = trks.filter(t => PARAMETERS[t.tname]);
-  console.log("Matched tracks:", matched.map(m => m.tname));
-
-  if (!matched.length) {
-    alert("No matching vitals found for this case.");
-    return;
-  }
-
   const promises = matched.map(async t => {
-    console.log("Loading:", t.tname, t.tid);
     const text = await fetch(`https://api.vitaldb.net/${t.tid}`).then(r => r.text());
     const values = text.trim().split("\n").map(row => {
       const [time, value] = row.split(',').map(parseFloat);
       return { time, value };
     }).filter(d => !isNaN(d.time) && !isNaN(d.value));
-
-    if (!values.length) console.warn("No data for", t.tname);
     return { label: PARAMETERS[t.tname], data: values };
   });
 
   const results = (await Promise.all(promises)).filter(d => d.data.length);
-  if (!results.length) {
-    alert("No vital data loaded.");
-    return;
-  }
-
   fullData = Object.fromEntries(results.map(d => [d.label, d.data]));
   currentBins = Array.from(new Set(results.flatMap(d => d.data.map(p => Math.floor(p.time))))).sort((a, b) => a - b);
 
@@ -104,6 +92,7 @@ function updateChart(timeBin) {
   xAxis.call(d3.axisBottom(xScale));
   yAxis.call(d3.axisLeft(yScale));
 
+  // Update chart lines
   const paths = plot.selectAll("path").data(displayData, d => d.label);
   paths.enter().append("path")
     .merge(paths)
@@ -112,4 +101,28 @@ function updateChart(timeBin) {
     .attr("d", d => line(d.data));
 
   paths.exit().remove();
+
+  // Update legend
+  const legend = d3.select("#legend").html("");
+  displayData.forEach(d => {
+    legend.append("div")
+      .style("color", color(d.label))
+      .style("margin", "2px 0")
+      .text(d.label);
+  });
+
+  // Tooltip circles
+  plot.selectAll("circle").remove();
+  displayData.forEach(d => {
+    plot.selectAll(`.dot-${d.label}`)
+      .data(d.data)
+      .enter()
+      .append("circle")
+      .attr("cx", d => xScale(d.time))
+      .attr("cy", d => yScale(d.value))
+      .attr("r", 3)
+      .attr("fill", color(d.label))
+      .append("title")
+      .text(d => `${d.label}: ${d.value.toFixed(2)} @ ${d.time.toFixed(1)}s`);
+  });
 }
