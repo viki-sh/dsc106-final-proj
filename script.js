@@ -1,7 +1,18 @@
+// Enhanced script with legend, checkbox filtering, and tooltips
+// script.js
+
 d3.json('vital_data.json').then(data => {
     const caseSelect = d3.select('#case-select');
-    const timeSlider = d3.select('#time-slider');
     const chart = d3.select('#chart');
+    const controls = d3.select('body').append('div').attr('id', 'controls');
+
+    const tooltip = d3.select('body').append('div')
+        .attr('class', 'tooltip')
+        .style('position', 'absolute')
+        .style('background', '#fff')
+        .style('border', '1px solid #ccc')
+        .style('padding', '5px')
+        .style('display', 'none');
 
     const caseIds = Object.keys(data);
     caseSelect.selectAll('option')
@@ -12,65 +23,103 @@ d3.json('vital_data.json').then(data => {
         .text(d => `Case ${d}`);
 
     const svg = chart.append('svg')
-        .attr('width', 800)
-        .attr('height', 400);
+        .attr('width', 900)
+        .attr('height', 500);
 
-    function updateChart(caseId, sliderValue) {
+    const color = d3.scaleOrdinal(d3.schemeCategory10);
+
+    let selectedParams = new Set();
+
+    function updateControls(params) {
+        controls.selectAll('*').remove();
+        controls.append('p').text('Select parameters to display:');
+        params.forEach(param => {
+            controls.append('label')
+                .text(param)
+                .append('input')
+                .attr('type', 'checkbox')
+                .attr('checked', true)
+                .on('change', function() {
+                    if (this.checked) selectedParams.add(param);
+                    else selectedParams.delete(param);
+                    updateChart(caseSelect.property('value'));
+                });
+            selectedParams.add(param);
+            controls.append('br');
+        });
+    }
+
+    function updateChart(caseId) {
         const caseData = data[caseId];
-
-        if (!caseData) return;
-
         svg.selectAll("*").remove();
 
-        const parameters = Object.keys(caseData);
-        const timeIndex = Math.floor(sliderValue);
+        const params = Object.keys(caseData);
+        const allPoints = params.flatMap(p => caseData[p]);
+        const xExtent = d3.extent(allPoints, d => d.time);
+        const yExtent = d3.extent(allPoints, d => d.value);
 
-        const values = parameters.map(param => ({
-            label: param,
-            value: caseData[param][timeIndex]?.value ?? null
-        }));
-
-        const x = d3.scaleBand()
-            .domain(values.map(d => d.label))
-            .range([50, 750])
-            .padding(0.2);
-
-        const y = d3.scaleLinear()
-            .domain([0, d3.max(values, d => d.value || 0) * 1.1])
-            .range([350, 50]);
+        const xScale = d3.scaleLinear().domain(xExtent).range([50, 850]);
+        const yScale = d3.scaleLinear().domain([0, yExtent[1]]).range([450, 50]);
 
         svg.append('g')
-            .attr('transform', 'translate(0,350)')
-            .call(d3.axisBottom(x))
-            .selectAll("text")
-            .attr("transform", "rotate(-45)")
-            .style("text-anchor", "end");
+            .attr('transform', 'translate(0,450)')
+            .call(d3.axisBottom(xScale));
 
         svg.append('g')
             .attr('transform', 'translate(50,0)')
-            .call(d3.axisLeft(y));
+            .call(d3.axisLeft(yScale));
 
-        svg.selectAll('.bar')
-            .data(values)
-            .enter()
-            .append('rect')
-            .attr('class', 'bar')
-            .attr('x', d => x(d.label))
-            .attr('y', d => d.value ? y(d.value) : 350)
-            .attr('width', x.bandwidth())
-            .attr('height', d => d.value ? 350 - y(d.value) : 0)
-            .attr('fill', 'steelblue');
+        const line = d3.line()
+            .x(d => xScale(d.time))
+            .y(d => yScale(d.value));
+
+        let legendY = 10;
+        params.forEach((param, idx) => {
+            if (!selectedParams.has(param)) return;
+            const values = caseData[param];
+
+            svg.append('path')
+                .datum(values)
+                .attr('fill', 'none')
+                .attr('stroke', color(param))
+                .attr('stroke-width', 1.5)
+                .attr('d', line);
+
+            svg.selectAll(`.dot-${idx}`)
+                .data(values)
+                .enter()
+                .append('circle')
+                .attr('class', `dot-${idx}`)
+                .attr('cx', d => xScale(d.time))
+                .attr('cy', d => yScale(d.value))
+                .attr('r', 3)
+                .attr('fill', color(param))
+                .on('mouseover', (event, d) => {
+                    tooltip.style('display', 'block')
+                        .html(`Time: ${d.time}s<br/>Value: ${d.value}`)
+                        .style('left', `${event.pageX + 10}px`)
+                        .style('top', `${event.pageY - 20}px`);
+                })
+                .on('mouseout', () => {
+                    tooltip.style('display', 'none');
+                });
+
+            svg.append('text')
+                .attr('x', 860)
+                .attr('y', legendY)
+                .attr('fill', color(param))
+                .text(param);
+            legendY += 20;
+        });
     }
 
-    const initialCase = caseIds[0];
-    caseSelect.property('value', initialCase);
-    updateChart(initialCase, timeSlider.property('value'));
-
     caseSelect.on('change', () => {
-        updateChart(caseSelect.property('value'), timeSlider.property('value'));
+        const selectedCase = caseSelect.property('value');
+        updateChart(selectedCase);
     });
 
-    timeSlider.on('input', () => {
-        updateChart(caseSelect.property('value'), timeSlider.property('value'));
-    });
+    // Initial render
+    const initialCase = caseIds[0];
+    updateControls(Object.keys(data[initialCase]));
+    updateChart(initialCase);
 });
