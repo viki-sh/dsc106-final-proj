@@ -3,6 +3,7 @@ body {
   text-align: center;
   margin: 0;
   padding: 1rem;
+  background: #fff;
 }
 
 h1 {
@@ -11,19 +12,30 @@ h1 {
 
 #legend {
   display: flex;
-  gap: 1rem;
   flex-wrap: wrap;
   justify-content: center;
+  gap: 1rem;
   margin: 10px 0;
+}
+
+#chart {
+  margin: auto;
+}
+
+button {
+  padding: 6px 14px;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 .tooltip {
   position: absolute;
-  background: #fff;
+  background: white;
   border: 1px solid #ccc;
   padding: 5px;
-  display: none;
+  font-size: 13px;
   pointer-events: none;
-  font-size: 0.85rem;
   text-align: left;
+  display: none;
+  z-index: 1000;
 }

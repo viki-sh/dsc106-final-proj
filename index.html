@@ -12,6 +12,16 @@
   <div id="chart"><svg></svg></div>
   <div id="nav"></div>
   <div id="controls"></div>
+
+  <div id="writeup" style="max-width: 800px; margin: 40px auto; text-align: left; font-family: sans-serif; line-height: 1.6;">
+    <h2>Project Write-up</h2>
+    <p><strong>1. What have you done so far?</strong><br>
+    So far, we have identified the top 20 most correlated cases from the first 500 case IDs using the vitaldb dataset. We successfully parsed and preprocessed the vitals data and created visualizations for each case. The vitals are displayed as interactive line charts with a legend, time slider, and tooltips. Users can play through the surgery timeline or explore specific time windows. We added parameter checkboxes for filtering and implemented a vertical guide line to improve interpretability. The site is deployed on GitHub Pages and optimized for accessibility. These features form the foundation of a user-friendly, data-rich interface that can be extended further.</p>
+
+    <p><strong>2. What will be the most challenging part of your project to design and why?</strong><br>
+    The most challenging part will be designing and integrating visual elements to enhance the narrative experience. We aim to build an interactive storytelling interface, such as displaying vitals on an EKG monitor and overlaying a cartoon patient graphic on the operating table. Creating dynamic elements like hovers on body parts, interactive tooltips tied to specific events, and transitions between surgery and post-op visuals will require custom graphics and precise data mapping. Another challenge is scaling the analysis across more than 6000 cases while preserving clarity. Handling large volumes of time-series data efficiently, especially when incorporating other variables like drugs or treatments, will require performance optimization. It will also be difficult to extract and visualize correlations between vital signs and drug administration. Designing these features while maintaining usability and clarity will be a complex task. However, these challenges are also the most exciting part of the project as they bring the data to life in meaningful ways.</p>
+  </div>
+
   <script src="/dsc106-final-proj/script.js"></script>
 </body>
 </html>
