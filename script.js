@@ -46,14 +46,14 @@ function updateSlider(caseData) {
 
     nav.selectAll('*').remove();
 
-    // Slider container
+
     const sliderWrapper = nav.append('div')
         .style('display', 'flex')
         .style('flex-direction', 'column')
         .style('align-items', 'center')
         .style('gap', '10px');
 
-    // Slider
+
     slider = sliderWrapper.append('input')
         .attr('type', 'range')
         .style('width', '900px')
