@@ -49,7 +49,13 @@ d3.json('vital_data.json').then(data => {
         maxTime = Math.max(...Object.values(caseData).flat().map(d => d.time));
         nav.selectAll('*').remove();
 
-        const wrapper = nav.append('div').style('display', 'flex').style('flex-direction', 'column').style('align-items', 'center').style('gap', '10px');
+        let currentSpeed = 50;  // faster default speed
+
+        const wrapper = nav.append('div')
+            .style('display', 'flex')
+            .style('flex-direction', 'column')
+            .style('align-items', 'center')
+            .style('gap', '10px');
 
         slider = wrapper.append('input')
             .attr('type', 'range')
@@ -64,6 +70,7 @@ d3.json('vital_data.json').then(data => {
             });
 
         const buttons = wrapper.append('div');
+
         buttons.append('button').text('▶️ Play').on('click', () => {
             if (autoplayInterval) return;
             autoplayInterval = setInterval(() => {
@@ -72,14 +79,16 @@ d3.json('vital_data.json').then(data => {
                 timeRange = [next, next + 300];
                 slider.property('value', next);
                 updateChart(caseSelect.property('value'));
-            }, speed);
+            }, currentSpeed);
         });
+
         buttons.append('button').text('⏸ Pause').style('margin-left', '10px').on('click', () => {
             clearInterval(autoplayInterval);
             autoplayInterval = null;
         });
+
         buttons.append('button').text('⏩ Speed it Up!').style('margin-left', '10px').on('click', () => {
-            speed = Math.max(10, speed - 10);
+            currentSpeed = Math.max(1, Math.floor(currentSpeed / 10));
             if (autoplayInterval) {
                 clearInterval(autoplayInterval);
                 autoplayInterval = setInterval(() => {
@@ -88,10 +97,11 @@ d3.json('vital_data.json').then(data => {
                     timeRange = [next, next + 300];
                     slider.property('value', next);
                     updateChart(caseSelect.property('value'));
-                }, speed);
+                }, currentSpeed);
             }
         });
     }
+
 
     function updateLegend(params) {
         legend.selectAll('*').remove();
