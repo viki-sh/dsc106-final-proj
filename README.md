@@ -1,4 +1,4 @@
-## 📁 Project Files Overview
+##  Files Overview
 
 | File/Folder                        | Description |
 |-----------------------------------|-------------|
