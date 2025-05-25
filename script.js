@@ -49,7 +49,13 @@ d3.json('vital_data.json').then(data => {
         maxTime = Math.max(...Object.values(caseData).flat().map(d => d.time));
         nav.selectAll('*').remove();
 
-        const wrapper = nav.append('div').style('display', 'flex').style('flex-direction', 'column').style('align-items', 'center').style('gap', '10px');
+        let currentSpeed = 50;
+
+        const wrapper = nav.append('div')
+            .style('display', 'flex')
+            .style('flex-direction', 'column')
+            .style('align-items', 'center')
+            .style('gap', '10px');
 
         slider = wrapper.append('input')
             .attr('type', 'range')
@@ -64,6 +70,7 @@ d3.json('vital_data.json').then(data => {
             });
 
         const buttons = wrapper.append('div');
+
         buttons.append('button').text('▶️ Play').on('click', () => {
             if (autoplayInterval) return;
             autoplayInterval = setInterval(() => {
@@ -72,14 +79,16 @@ d3.json('vital_data.json').then(data => {
                 timeRange = [next, next + 300];
                 slider.property('value', next);
                 updateChart(caseSelect.property('value'));
-            }, speed);
+            }, currentSpeed);
         });
+
         buttons.append('button').text('⏸ Pause').style('margin-left', '10px').on('click', () => {
             clearInterval(autoplayInterval);
             autoplayInterval = null;
         });
+
         buttons.append('button').text('⏩ Speed it Up!').style('margin-left', '10px').on('click', () => {
-            speed = Math.max(10, speed - 10);
+            currentSpeed = Math.max(1, Math.floor(currentSpeed / 10));
             if (autoplayInterval) {
                 clearInterval(autoplayInterval);
                 autoplayInterval = setInterval(() => {
@@ -88,7 +97,7 @@ d3.json('vital_data.json').then(data => {
                     timeRange = [next, next + 300];
                     slider.property('value', next);
                     updateChart(caseSelect.property('value'));
-                }, speed);
+                }, currentSpeed);
             }
         });
     }
@@ -96,7 +105,10 @@ d3.json('vital_data.json').then(data => {
     function updateLegend(params) {
         legend.selectAll('*').remove();
         params.forEach(param => {
-            const row = legend.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '0.3rem');
+            const row = legend.append('div')
+                .style('display', 'flex')
+                .style('align-items', 'center')
+                .style('gap', '0.3rem');
             row.append('input')
                 .attr('type', 'checkbox')
                 .property('checked', true)
@@ -104,7 +116,10 @@ d3.json('vital_data.json').then(data => {
                     this.checked ? selectedParams.add(param) : selectedParams.delete(param);
                     updateChart(caseSelect.property('value'));
                 });
-            row.append('span').style('color', color(param)).style('font-weight', 'bold').text(param);
+            row.append('span')
+                .style('color', color(param))
+                .style('font-weight', 'bold')
+                .text(param);
             selectedParams.add(param);
         });
     }
@@ -114,8 +129,10 @@ d3.json('vital_data.json').then(data => {
         svg.selectAll('*').remove();
 
         const params = Object.keys(caseData);
-        const points = params.filter(p => selectedParams.has(p)).flatMap(p => caseData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]));
-        const yExtent = d3.extent(points, d => d.value);
+        const visiblePoints = params
+            .filter(p => selectedParams.has(p))
+            .flatMap(p => caseData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]));
+        const yExtent = d3.extent(visiblePoints, d => d.value);
         const xScale = d3.scaleLinear().domain(timeRange).range([50, 850]);
         const yScale = d3.scaleLinear().domain(yExtent).range([450, 50]);
 
@@ -124,31 +141,51 @@ d3.json('vital_data.json').then(data => {
 
         const line = d3.line().x(d => xScale(d.time)).y(d => yScale(d.value));
 
-        const guide = svg.append('line').attr('y1', 0).attr('y2', 450).attr('stroke', '#999').attr('stroke-width', 1).style('display', 'none');
+        const guide = svg.append('line')
+            .attr('y1', 0).attr('y2', 450)
+            .attr('stroke', '#999')
+            .attr('stroke-width', 1)
+            .style('display', 'none');
 
         svg.append('rect')
-            .attr('x', 50).attr('y', 0).attr('width', 800).attr('height', 450)
+            .attr('x', 50)
+            .attr('y', 0)
+            .attr('width', 800)
+            .attr('height', 450)
             .attr('fill', 'transparent')
             .on('mousemove', function (event) {
                 const [x] = d3.pointer(event);
-                const t = Math.round(xScale.invert(x));
+                const time = Math.round(xScale.invert(x));
                 guide.attr('x1', x).attr('x2', x).style('display', 'block');
-                let html = `Time: ${formatTime(t)}<br/>`;
+
+                let html = `Time: ${formatTime(time)}<br/>`;
                 selectedParams.forEach(p => {
-                    const closest = caseData[p].reduce((a, b) => Math.abs(b.time - t) < Math.abs(a.time - t) ? b : a);
-                    html += `<span style='color:${color(p)}'>${p}</span>: ${closest.value.toFixed(1)}<br/>`;
+                    const nearest = caseData[p].reduce((a, b) =>
+                        Math.abs(b.time - time) < Math.abs(a.time - time) ? b : a
+                    );
+                    html += `<span style='color:${color(p)}'>${p}</span>: ${nearest.value.toFixed(1)}<br/>`;
                 });
-                tooltip.html(html).style('display', 'block').style('left', `${event.pageX + 10}px`).style('top', `${event.pageY - 40}px`);
+
+                tooltip
+                    .html(html)
+                    .style('display', 'block')
+                    .style('left', `${event.pageX + 10}px`)
+                    .style('top', `${event.pageY - 40}px`);
             })
             .on('mouseout', () => {
                 tooltip.style('display', 'none');
                 guide.style('display', 'none');
             });
 
-        params.forEach(p => {
-            if (!selectedParams.has(p)) return;
-            const values = caseData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]);
-            svg.append('path').datum(values).attr('fill', 'none').attr('stroke', color(p)).attr('stroke-width', 1.5).attr('d', line);
+        params.forEach(param => {
+            if (!selectedParams.has(param)) return;
+            const values = caseData[param].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]);
+            svg.append('path')
+                .datum(values)
+                .attr('fill', 'none')
+                .attr('stroke', color(param))
+                .attr('stroke-width', 1.5)
+                .attr('d', line);
         });
     }
 
