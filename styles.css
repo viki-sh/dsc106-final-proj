@@ -1,51 +1,30 @@
 body {
   font-family: Arial, sans-serif;
+  text-align: center;
+  background: #fff;
   margin: 0;
   padding: 20px;
-  text-align: center;
-}
-
-#chart svg {
-  background: #fafafa;
-  border: 1px solid #ccc;
-  display: block;
-  margin: 0 auto;
 }
 
 #legend {
   display: flex;
-  gap: 1rem;
   flex-wrap: wrap;
   justify-content: center;
   margin: 10px 0;
-}
-
-#nav {
-  margin-top: 20px;
+  gap: 1rem;
 }
 
 .tooltip {
-  pointer-events: none;
-  font-size: 12px;
   position: absolute;
   background: white;
-  border: 1px solid gray;
-  padding: 4px 8px;
-  border-radius: 4px;
-  box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  border: 1px solid #ccc;
+  padding: 5px;
+  font-size: 13px;
+  pointer-events: none;
 }
 
 button {
-  padding: 4px 10px;
-  font-size: 14px;
-  margin: 0 2px;
+  padding: 5px 12px;
+  margin: 0 4px;
   cursor: pointer;
-}
-
-input[type="range"] {
-  margin-top: 15px;
-  height: 6px;
-  background-color: #ddd;
-  border-radius: 4px;
-  outline: none;
 }
