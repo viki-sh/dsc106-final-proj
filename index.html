@@ -2,19 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Vital Sign Viewer</title>
-  <link rel="stylesheet" href="/dsc106-final-proj/styles.css" />
+  <title>Vitals vs Interventions</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
-  <div id="header"></div>
-  <div id="legend"></div>
-  <div id="chart"><svg></svg></div>
-  <div id="nav"></div>
-  <div id="controls"></div>
+  <h2>Vitals Over Time</h2>
+  <svg id="vital-chart" width="800" height="200"></svg>
 
-  
+  <h3>Intervention Parameters</h3>
+  <svg id="intervention-chart" width="800" height="200"></svg>
 
-  <script src="/dsc106-final-proj/script.js"></script>
+  <button id="play-button">▶ Play</button>
+
+  <script src="script.js"></script>
 </body>
 </html>
