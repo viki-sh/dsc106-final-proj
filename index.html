@@ -7,25 +7,31 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="app-container">
-    <div id="sidebar">
+  <h1>Vitals + Interventions Viewer</h1>
+
+  <!-- VITAL ROW -->
+  <div class="chart-row">
+    <div class="legend-block">
       <h3>Vitals</h3>
       <div id="legend" class="legend"></div>
+    </div>
+    <svg id="vital-chart" width="800" height="500"></svg>
+  </div>
+
+  <!-- INTERVENTION ROW -->
+  <div class="chart-row">
+    <div class="legend-block">
       <h3>Interventions</h3>
       <div id="intervention-legend" class="legend"></div>
     </div>
+    <svg id="intervention-chart" width="800" height="200"></svg>
+  </div>
 
-    <div id="main-content">
-      <div id="header">
-        <label for="case-select">Select Case ID: </label>
-        <select id="case-select"></select>
-      </div>
-
-      <svg id="vital-chart" width="800" height="500"></svg>
-      <svg id="intervention-chart" width="800" height="200"></svg>
-
-      <div id="nav"></div>
-    </div>
+  <!-- CONTROLS -->
+  <div id="controls">
+    <label for="case-select">Select Case ID:</label>
+    <select id="case-select"></select>
+    <div id="nav"></div>
   </div>
 
   <script src="script.js"></script>
