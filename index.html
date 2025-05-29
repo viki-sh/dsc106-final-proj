@@ -13,17 +13,7 @@
   <div id="nav"></div>
   <div id="controls"></div>
 
-  <div id="writeup" style="max-width: 800px; margin: 40px auto; text-align: left; font-family: sans-serif; line-height: 1.6;">
-    <h2>Project Write-up</h2>
-
-    <p><strong>1. What have you done so far?</strong><br>
-    We began by researching vital signs that commonly fluctuate in relation to heart rate. From this, we selected 14 relevant clinical parameters from the VitalDB dataset, including heart rate, various blood pressures, oxygen saturation, CO2 levels, and others. Using the VitalDB API, we downloaded metadata for the first 500 surgeries (as processing all 6000 cases was computationally too heavy) and filtered for track IDs matching our selected parameters. For each case, we downloaded time-series data, aggregated it into 15-minute bins, and computed Pearson correlations between heart rate and the other vitals. This allowed us to identify the top 20 cases with the strongest correlations. After selecting these cases, we re-downloaded their full second-by-second data for all available parameters. We organized this cleaned data into a structured JSON file, grouping values by parameter and time. This `vital_data.json` file is loaded into the webpage to power the interactive visualization. We also implemented a filterable legend, tooltips, a playback slider, and a vertical guide line to help users explore how vital signs relate to each other over the course of a surgery.</p>
-
-
-    <p><strong>2. What will be the most challenging part of your project to design and why?</strong><br>
-    Our goal for this project is to create a storytelling, interactive webpage with engaging graphics that guide the viewer through a surgical experience. We want to include interactive visuals such as a clip art-style patient on an operating table that users can hover over to reveal patient information. Additionally, we aim to display the vital signs on an EKG-style monitor to simulate an operating room environment. After the surgery view, we plan to show a cartoon of the patient in post-op, along with statistics like mortality rate, hospital stay duration, and other outcomes. Beyond visuals, we also plan to add a comprehensive and formal analysis section at the bottom of the webpage. This section will explore the relationships between vitals, drugs administered, patient demographics, and post-op outcomes. Since the dataset contains over 6000 surgeries with many overlapping variables, performing thorough data cleaning and integration will be a significant challenge. </p>
-
-    </div>
+  
 
   <script src="/dsc106-final-proj/script.js"></script>
 </body>
