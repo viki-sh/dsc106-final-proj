@@ -9,29 +9,42 @@
 <body>
   <h1>Vitals + Interventions Viewer</h1>
 
-  <!-- VITAL ROW -->
-  <div class="chart-row">
-    <div class="legend-block">
-      <h3>Vitals</h3>
-      <div id="legend" class="legend"></div>
-    </div>
-    <svg id="vital-chart" width="800" height="500"></svg>
-  </div>
+  <!-- CONTAINER FOR CHARTS AND READOUT -->
+  <div id="viz-layout">
 
-  <!-- INTERVENTION ROW -->
-  <div class="chart-row">
-    <div class="legend-block">
-      <h3>Interventions</h3>
-      <div id="intervention-legend" class="legend"></div>
-    </div>
-    <svg id="intervention-chart" width="800" height="200"></svg>
-  </div>
+    <div id="viz-left">
+      <!-- VITALS -->
+      <div class="chart-row">
+        <div class="legend-block">
+          <h3>Vitals</h3>
+          <div id="legend" class="legend"></div>
+        </div>
+        <svg id="vital-chart" width="800" height="500"></svg>
+      </div>
 
-  <!-- CONTROLS -->
-  <div id="controls">
-    <label for="case-select">Select Case ID:</label>
-    <select id="case-select"></select>
-    <div id="nav"></div>
+      <!-- INTERVENTIONS -->
+      <div class="chart-row">
+        <div class="legend-block">
+          <h3>Interventions</h3>
+          <div id="intervention-legend" class="legend"></div>
+        </div>
+        <svg id="intervention-chart" width="800" height="200"></svg>
+      </div>
+
+      <!-- CONTROLS -->
+      <div id="controls">
+        <label for="case-select">Select Case ID:</label>
+        <select id="case-select"></select>
+        <div id="nav"></div>
+      </div>
+    </div>
+
+    <!-- LIVE VALUES PANEL -->
+    <div id="readout">
+      <h3>Live Values</h3>
+      <div id="live-data"></div>
+    </div>
+
   </div>
 
   <script src="script.js"></script>

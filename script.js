@@ -105,31 +105,66 @@ Promise.all([
     });
   }
 
-  function updateChart(caseId) {
+    function updateChart(caseId) {
     const caseData = vitalData[caseId];
     const proxyData = interventionData[caseId] || {};
 
     vitalSVG.selectAll('*').remove();
     interventionSVG.selectAll('*').remove();
 
+    const updateLiveReadout = (time) => {
+        let html = `<strong>${formatTime(time)}</strong><br/>`;
+        selectedParams.forEach(p => {
+        const v = caseData[p].reduce((a, b) =>
+            Math.abs(b.time - time) < Math.abs(a.time - time) ? b : a);
+        html += `<div><span style='color:${color(p)}'>${p}</span>: ${v.value.toFixed(1)}</div>`;
+        });
+        selectedIParams.forEach(p => {
+        const v = proxyData[p].reduce((a, b) =>
+            Math.abs(b.time - time) < Math.abs(a.time - time) ? b : a);
+        html += `<div><span style='color:${iColor(p)}'>${p}</span>: ${v.value.toFixed(1)}</div>`;
+        });
+        d3.select('#live-data').html(html);
+    };
+
     const params = Object.keys(caseData);
     const xScale = d3.scaleLinear().domain(timeRange).range([50, 850]);
     const yExtent = d3.extent(
-      params.filter(p => selectedParams.has(p)).flatMap(p =>
+        params.filter(p => selectedParams.has(p)).flatMap(p =>
         caseData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]).map(d => d.value)
-      )
+        )
     );
     const yScale = d3.scaleLinear().domain(yExtent).range([450, 50]);
 
+    // VITAL CHART
     vitalSVG.append('g').attr('transform', 'translate(0,450)').call(d3.axisBottom(xScale).tickFormat(formatTime));
     vitalSVG.append('g').attr('transform', 'translate(50,0)').call(d3.axisLeft(yScale));
 
     const line = d3.line().x(d => xScale(d.time)).y(d => yScale(d.value));
 
+    const guide = vitalSVG.append('line')
+        .attr('y1', 0).attr('y2', 450)
+        .attr('stroke', 'gray')
+        .attr('stroke-width', 1.5)
+        .attr('id', 'vital-guide');
+
+    vitalSVG.append('rect')
+        .attr('x', 50)
+        .attr('y', 0)
+        .attr('width', 800)
+        .attr('height', 450)
+        .attr('fill', 'transparent')
+        .on('mousemove', function (event) {
+        const [x] = d3.pointer(event);
+        const time = Math.round(xScale.invert(x));
+        guide.attr('x1', x).attr('x2', x);
+        updateLiveReadout(time);
+        });
+
     params.forEach(p => {
-      if (!selectedParams.has(p)) return;
-      const values = caseData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]);
-      vitalSVG.append('path')
+        if (!selectedParams.has(p)) return;
+        const values = caseData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]);
+        vitalSVG.append('path')
         .datum(values)
         .attr('fill', 'none')
         .attr('stroke', color(p))
@@ -137,13 +172,13 @@ Promise.all([
         .attr('d', line);
     });
 
-    // Intervention
+    // INTERVENTION CHART
     const iParams = Object.keys(proxyData);
     const iXScale = xScale.copy();
     const iExtent = d3.extent(
-      iParams.filter(p => selectedIParams.has(p)).flatMap(p =>
+        iParams.filter(p => selectedIParams.has(p)).flatMap(p =>
         proxyData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]).map(d => d.value)
-      )
+        )
     );
     const iYScale = d3.scaleLinear().domain(iExtent).range([180, 20]);
     const iLine = d3.line().x(d => iXScale(d.time)).y(d => iYScale(d.value));
@@ -151,17 +186,37 @@ Promise.all([
     interventionSVG.append('g').attr('transform', 'translate(0,180)').call(d3.axisBottom(iXScale).tickFormat(formatTime));
     interventionSVG.append('g').attr('transform', 'translate(50,0)').call(d3.axisLeft(iYScale));
 
+    const iGuide = interventionSVG.append('line')
+        .attr('y1', 0).attr('y2', 180)
+        .attr('stroke', 'gray')
+        .attr('stroke-width', 1.5)
+        .attr('id', 'intervention-guide');
+
+    interventionSVG.append('rect')
+        .attr('x', 50)
+        .attr('y', 0)
+        .attr('width', 800)
+        .attr('height', 180)
+        .attr('fill', 'transparent')
+        .on('mousemove', function (event) {
+        const [x] = d3.pointer(event);
+        const time = Math.round(xScale.invert(x));
+        iGuide.attr('x1', x).attr('x2', x);
+        updateLiveReadout(time);
+        });
+
     iParams.forEach(p => {
-      if (!selectedIParams.has(p)) return;
-      const values = proxyData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]);
-      interventionSVG.append('path')
+        if (!selectedIParams.has(p)) return;
+        const values = proxyData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]);
+        interventionSVG.append('path')
         .datum(values)
         .attr('fill', 'none')
         .attr('stroke', iColor(p))
         .attr('stroke-width', 2)
         .attr('d', iLine);
     });
-  }
+    }
+
 
   // Init
   const header = d3.select('#header');

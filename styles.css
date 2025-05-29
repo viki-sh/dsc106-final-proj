@@ -2,39 +2,69 @@ body {
   font-family: sans-serif;
   padding: 2rem;
 }
+
 h1 {
   margin-bottom: 1.5rem;
 }
+
+#viz-layout {
+  display: flex;
+  gap: 2rem;
+}
+
+#viz-left {
+  flex-grow: 1;
+}
+
+/* Shared for both vitals + interventions */
 .chart-row {
   display: flex;
   align-items: flex-start;
-  gap: 2rem;
+  gap: 1rem;
   margin-bottom: 2rem;
 }
+
 .legend-block {
   width: 180px;
 }
+
 .legend {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 }
+
 .legend div {
   display: flex;
   align-items: center;
   gap: 0.3rem;
 }
+
 #controls {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
+
 #nav {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
+
+#readout {
+  width: 220px;
+  padding: 1rem;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+  background: #fff;
+}
+
+#live-data div {
+  margin-bottom: 0.4rem;
+}
+
 .tooltip {
   position: absolute;
   background-color: white;
@@ -42,5 +72,5 @@ h1 {
   padding: 8px;
   font-size: 0.9rem;
   pointer-events: none;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
