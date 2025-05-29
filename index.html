@@ -2,17 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Vitals vs Interventions</title>
+  <title>Vitals + Interventions Viewer</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div id="header"></div>
+
   <h2>Vitals Over Time</h2>
-  <svg id="vital-chart" width="800" height="200"></svg>
+  <svg id="vital-chart" width="900" height="500"></svg>
+
+  <div id="legend"></div>
 
   <h3>Intervention Parameters</h3>
-  <svg id="intervention-chart" width="800" height="200"></svg>
+  <svg id="intervention-chart" width="900" height="200"></svg>
 
-  <button id="play-button">▶ Play</button>
+  <div id="intervention-legend"></div>
+
+  <div id="nav"></div>
 
   <script src="script.js"></script>
 </body>

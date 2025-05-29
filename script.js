@@ -2,37 +2,24 @@ Promise.all([
   d3.json('vital_data.json'),
   d3.json('proxy_drug_data.json')
 ]).then(([vitalData, interventionData]) => {
-  const header = d3.select('#header');
-  header.append('h1').text('Vital Sign Viewer');
-
-  const selectorDiv = header.append('div');
-  selectorDiv.append('label').text('Select Case ID: ');
-  selectorDiv.append('select').attr('id', 'case-select');
-
   const caseSelect = d3.select('#case-select');
-  const vitalSVG = d3.select('#vital-chart').attr('width', 900).attr('height', 500);
-  const interventionSVG = d3.select('#intervention-chart').attr('width', 900).attr('height', 200);
+  const vitalSVG = d3.select('#vital-chart');
+  const interventionSVG = d3.select('#intervention-chart');
   const legend = d3.select('#legend');
+  const iLegend = d3.select('#intervention-legend');
   const nav = d3.select('#nav');
   const tooltip = d3.select('body').append('div').attr('class', 'tooltip');
 
   const color = d3.scaleOrdinal(d3.schemeTableau10);
   const iColor = d3.scaleOrdinal(d3.schemeSet2);
-
   const caseIds = Object.keys(vitalData);
-  caseSelect.selectAll('option')
-    .data(caseIds)
-    .enter()
-    .append('option')
-    .attr('value', d => d)
-    .text(d => `Case ${d}`);
 
   let selectedParams = new Set();
+  let selectedIParams = new Set();
   let timeRange = [0, 300];
   let autoplayInterval = null;
-  let speed = 100;
-  let maxTime = 0;
   let slider = null;
+  let maxTime = 0;
 
   function formatTime(seconds) {
     const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
@@ -41,10 +28,31 @@ Promise.all([
     return `${h}:${m}:${s}`;
   }
 
+  function updateLegend(params, container, set, colorScale, updateFn) {
+    container.selectAll('*').remove();
+    params.forEach(param => {
+      const row = container.append('div')
+        .style('display', 'flex')
+        .style('align-items', 'center')
+        .style('gap', '0.3rem');
+      row.append('input')
+        .attr('type', 'checkbox')
+        .property('checked', true)
+        .on('change', function () {
+          this.checked ? set.add(param) : set.delete(param);
+          updateFn(caseSelect.property('value'));
+        });
+      row.append('span')
+        .style('color', colorScale(param))
+        .style('font-weight', 'bold')
+        .text(param);
+      set.add(param);
+    });
+  }
+
   function updateSlider(caseData) {
     maxTime = Math.max(...Object.values(caseData).flat().map(d => d.time));
     nav.selectAll('*').remove();
-
     let currentSpeed = 50;
 
     const wrapper = nav.append('div')
@@ -66,7 +74,6 @@ Promise.all([
       });
 
     const buttons = wrapper.append('div');
-
     buttons.append('button').text('▶️ Play').on('click', () => {
       if (autoplayInterval) return;
       autoplayInterval = setInterval(() => {
@@ -98,43 +105,20 @@ Promise.all([
     });
   }
 
-  function updateLegend(params) {
-    legend.selectAll('*').remove();
-    params.forEach(param => {
-      const row = legend.append('div')
-        .style('display', 'flex')
-        .style('align-items', 'center')
-        .style('gap', '0.3rem');
-      row.append('input')
-        .attr('type', 'checkbox')
-        .property('checked', true)
-        .on('change', function () {
-          this.checked ? selectedParams.add(param) : selectedParams.delete(param);
-          updateChart(caseSelect.property('value'));
-        });
-      row.append('span')
-        .style('color', color(param))
-        .style('font-weight', 'bold')
-        .text(param);
-      selectedParams.add(param);
-    });
-  }
-
   function updateChart(caseId) {
     const caseData = vitalData[caseId];
     const proxyData = interventionData[caseId] || {};
 
-    // Clear charts
     vitalSVG.selectAll('*').remove();
     interventionSVG.selectAll('*').remove();
 
-    // VITAL CHART
     const params = Object.keys(caseData);
-    const visiblePoints = params
-      .filter(p => selectedParams.has(p))
-      .flatMap(p => caseData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]));
-    const yExtent = d3.extent(visiblePoints, d => d.value);
     const xScale = d3.scaleLinear().domain(timeRange).range([50, 850]);
+    const yExtent = d3.extent(
+      params.filter(p => selectedParams.has(p)).flatMap(p =>
+        caseData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]).map(d => d.value)
+      )
+    );
     const yScale = d3.scaleLinear().domain(yExtent).range([450, 50]);
 
     vitalSVG.append('g').attr('transform', 'translate(0,450)').call(d3.axisBottom(xScale).tickFormat(formatTime));
@@ -142,64 +126,33 @@ Promise.all([
 
     const line = d3.line().x(d => xScale(d.time)).y(d => yScale(d.value));
 
-    const guide = vitalSVG.append('line')
-      .attr('y1', 0).attr('y2', 450)
-      .attr('stroke', '#999')
-      .attr('stroke-width', 1)
-      .style('display', 'none');
-
-    vitalSVG.append('rect')
-      .attr('x', 50)
-      .attr('y', 0)
-      .attr('width', 800)
-      .attr('height', 450)
-      .attr('fill', 'transparent')
-      .on('mousemove', function (event) {
-        const [x] = d3.pointer(event);
-        const time = Math.round(xScale.invert(x));
-        guide.attr('x1', x).attr('x2', x).style('display', 'block');
-
-        let html = `Time: ${formatTime(time)}<br/>`;
-        selectedParams.forEach(p => {
-          const nearest = caseData[p].reduce((a, b) =>
-            Math.abs(b.time - time) < Math.abs(a.time - time) ? b : a
-          );
-          html += `<span style='color:${color(p)}'>${p}</span>: ${nearest.value.toFixed(1)}<br/>`;
-        });
-
-        tooltip
-          .html(html)
-          .style('display', 'block')
-          .style('left', `${event.pageX + 10}px`)
-          .style('top', `${event.pageY - 40}px`);
-      })
-      .on('mouseout', () => {
-        tooltip.style('display', 'none');
-        guide.style('display', 'none');
-      });
-
-    params.forEach(param => {
-      if (!selectedParams.has(param)) return;
-      const values = caseData[param].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]);
+    params.forEach(p => {
+      if (!selectedParams.has(p)) return;
+      const values = caseData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]);
       vitalSVG.append('path')
         .datum(values)
         .attr('fill', 'none')
-        .attr('stroke', color(param))
+        .attr('stroke', color(p))
         .attr('stroke-width', 1.5)
         .attr('d', line);
     });
 
-    // INTERVENTION CHART
+    // Intervention
     const iParams = Object.keys(proxyData);
-    const iPoints = iParams.flatMap(p => proxyData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]));
-    const iExtent = d3.extent(iPoints, d => d.value);
+    const iXScale = xScale.copy();
+    const iExtent = d3.extent(
+      iParams.filter(p => selectedIParams.has(p)).flatMap(p =>
+        proxyData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]).map(d => d.value)
+      )
+    );
     const iYScale = d3.scaleLinear().domain(iExtent).range([180, 20]);
-    const iLine = d3.line().x(d => xScale(d.time)).y(d => iYScale(d.value));
+    const iLine = d3.line().x(d => iXScale(d.time)).y(d => iYScale(d.value));
 
-    interventionSVG.append('g').attr('transform', 'translate(0,180)').call(d3.axisBottom(xScale).tickFormat(formatTime));
+    interventionSVG.append('g').attr('transform', 'translate(0,180)').call(d3.axisBottom(iXScale).tickFormat(formatTime));
     interventionSVG.append('g').attr('transform', 'translate(50,0)').call(d3.axisLeft(iYScale));
 
     iParams.forEach(p => {
+      if (!selectedIParams.has(p)) return;
       const values = proxyData[p].filter(d => d.time >= timeRange[0] && d.time <= timeRange[1]);
       interventionSVG.append('path')
         .datum(values)
@@ -210,18 +163,35 @@ Promise.all([
     });
   }
 
-  caseSelect.on('change', () => {
-    const selected = caseSelect.property('value');
+  // Init
+  const header = d3.select('#header');
+  header.append('label').text('Select Case ID: ');
+  header.append('select').attr('id', 'case-select');
+  const selector = d3.select('#case-select');
+  selector.selectAll('option')
+    .data(caseIds)
+    .enter()
+    .append('option')
+    .attr('value', d => d)
+    .text(d => `Case ${d}`);
+
+  selector.on('change', () => {
+    const selected = selector.property('value');
     const params = Object.keys(vitalData[selected]);
+    const iParams = Object.keys(interventionData[selected] || {});
     selectedParams = new Set(params);
-    updateLegend(params);
+    selectedIParams = new Set(iParams);
+    updateLegend(params, legend, selectedParams, color, updateChart);
+    updateLegend(iParams, iLegend, selectedIParams, iColor, updateChart);
     updateSlider(vitalData[selected]);
     updateChart(selected);
   });
 
   const initialCase = caseIds[0];
   selectedParams = new Set(Object.keys(vitalData[initialCase]));
-  updateLegend(Array.from(selectedParams));
+  selectedIParams = new Set(Object.keys(interventionData[initialCase] || {}));
+  updateLegend(Array.from(selectedParams), legend, selectedParams, color, updateChart);
+  updateLegend(Array.from(selectedIParams), iLegend, selectedIParams, iColor, updateChart);
   updateSlider(vitalData[initialCase]);
   updateChart(initialCase);
 });
