@@ -1,3 +1,4 @@
+
 const width = 1000;
 const height = 340;
 
@@ -17,9 +18,9 @@ Promise.all([
   const colorVitals = d3.scaleOrdinal().domain(vitalParams).range(d3.schemeTableau10);
   const colorDrugs = d3.scaleOrdinal().domain(drugParams).range(d3.schemeSet2);
 
-  const xScale = d3.scaleTime().range([50, width - 50]);
-  const yVitals = d3.scaleLinear().range([height - 30, 10]);
-  const yDrugs = d3.scaleLinear().range([height - 30, 10]);
+  const xScale = d3.scaleTime().range([60, width - 60]);
+  const yVitals = d3.scaleLinear().range([height - 40, 20]);
+  const yDrugs = d3.scaleLinear().range([height - 40, 20]);
 
   const lineVitals = d3.line().x(d => xScale(new Date(d.time))).y(d => yVitals(d.value));
   const lineDrugs = d3.line().x(d => xScale(new Date(d.time))).y(d => yDrugs(d.value));
@@ -27,9 +28,27 @@ Promise.all([
   const verticalLine = vitalSvg.append("line").attr("stroke", "#333").attr("y1", 0).attr("y2", height);
   const drugLine = drugSvg.append("line").attr("stroke", "#333").attr("y1", 0).attr("y2", height);
 
-  const xAxisVitals = vitalSvg.append("g").attr("transform", `translate(0,${height - 30})`);
-  const yAxisVitals = vitalSvg.append("g").attr("transform", "translate(50,0)");
-  const yAxisDrugs = drugSvg.append("g").attr("transform", `translate(${width - 50},0)`);
+  const xAxisVitals = vitalSvg.append("g").attr("transform", `translate(0,${height - 40})`);
+  const yAxisVitals = vitalSvg.append("g").attr("transform", "translate(60,0)");
+  const xAxisDrugs = drugSvg.append("g").attr("transform", `translate(0,${height - 40})`);
+  const yAxisDrugs = drugSvg.append("g").attr("transform", `translate(${width - 60},0)`);
+
+  // axis labels
+  vitalSvg.append("text").attr("class", "axis-label")
+    .attr("x", width / 2).attr("y", height - 5)
+    .style("text-anchor", "middle").text("Time");
+
+  vitalSvg.append("text").attr("class", "axis-label")
+    .attr("x", -height / 2).attr("y", 20)
+    .attr("transform", "rotate(-90)").style("text-anchor", "middle").text("Vitals");
+
+  drugSvg.append("text").attr("class", "axis-label")
+    .attr("x", width / 2).attr("y", height - 5)
+    .style("text-anchor", "middle").text("Time");
+
+  drugSvg.append("text").attr("class", "axis-label")
+    .attr("x", -height / 2).attr("y", 20)
+    .attr("transform", "rotate(-90)").style("text-anchor", "middle").text("Interventions");
 
   const caseIds = Object.keys(vitalData);
   caseIds.forEach(id => {
@@ -40,16 +59,17 @@ Promise.all([
   let timeIndex = 0, timer = null, speed = 200, selectedCase = caseIds[0];
 
   function drawStaticLines(vData, dData) {
-    const allTimes = [...vitalParams, ...drugParams].flatMap(p => 
+    const allTimes = [...vitalParams, ...drugParams].flatMap(p =>
       (vData[p] || dData[p] || []).map(d => new Date(d.time))
     );
     xScale.domain(d3.extent(allTimes));
     yVitals.domain([0, d3.max(vitalParams.flatMap(p => vData[p].map(d => d.value)))]);
     yDrugs.domain([0, d3.max(drugParams.flatMap(p => dData[p].map(d => d.value)))]);
 
-    xAxisVitals.call(d3.axisBottom(xScale).ticks(5));
-    yAxisVitals.call(d3.axisLeft(yVitals));
-    yAxisDrugs.call(d3.axisRight(yDrugs));
+    xAxisVitals.call(d3.axisBottom(xScale).ticks(5).tickSize(-height + 60));
+    yAxisVitals.call(d3.axisLeft(yVitals).ticks(5).tickSize(-width + 120));
+    xAxisDrugs.call(d3.axisBottom(xScale).ticks(5).tickSize(-height + 60));
+    yAxisDrugs.call(d3.axisRight(yDrugs).ticks(5).tickSize(-width + 120));
 
     vitalParams.forEach(p => {
       if (!vitalPaths[p]) {
