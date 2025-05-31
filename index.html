@@ -8,15 +8,45 @@
 </head>
 <body>
   <div class="layout">
-    <!-- EKG Screen -->
+    <!-- ==================================== -->
+    <!-- EKG‐Style Screen Container -->
+    <!-- ==================================== -->
     <div class="ekg-screen">
+
+      <!-- Vitals Chart Title -->
       <div class="ekg-title">Vitals</div>
-      <svg id="chart"></svg>
+      <!-- Vitals SVG (with clipPath for sliding window) -->
+      <svg id="chart" width="1000" height="340">
+        <defs>
+          <clipPath id="clip-vitals">
+            <!-- x=60 leaves room for left‐axis label; width=880 = 1000 − (60 left + 60 right) -->
+            <rect x="60" y="0" width="880" height="340"></rect>
+          </clipPath>
+        </defs>
+        <!-- All vital lines will be appended into this group -->
+        <g class="vital-lines" clip-path="url(#clip-vitals)"></g>
+      </svg>
+
+      <!-- Interventions Chart Title -->
       <div class="ekg-title">Interventions</div>
-      <svg id="intervention-chart"></svg>
+      <!-- Interventions SVG (with its own clipPath) -->
+      <svg id="intervention-chart" width="1000" height="340">
+        <defs>
+          <clipPath id="clip-drugs">
+            <rect x="60" y="0" width="880" height="340"></rect>
+          </clipPath>
+        </defs>
+        <g class="drug-lines" clip-path="url(#clip-drugs)"></g>
+      </svg>
+
+      <!-- Slider (toggle bar) -->
+      <input type="range" id="time-slider" min="0" max="0" step="1" disabled>
+
     </div>
 
-    <!-- Side Panel -->
+    <!-- ==================================== -->
+    <!-- Side Panel: Play/Pause/Speed + Legend + Live Values + Dropdown -->
+    <!-- ==================================== -->
     <div class="side-panel">
       <div class="ekg-controls">
         <button id="play">▶️ Play</button>
@@ -28,21 +58,11 @@
       <div id="live-values" class="live-values-box"></div>
 
       <label for="case-select">Select Case ID:</label>
-      <select id="case-select">
-        <option value="1">Case 1</option>
-        <option value="2">Case 2</option>
-        <option value="3">Case 3</option>
-        <option value="4">Case 4</option>
-        <option value="5">Case 5</option>
-        <option value="25">Case 25</option>
-      </select>
-
-      <br /><br />
-      <label for="timeline-slider">Surgery Progress:</label>
-      <input type="range" id="timeline-slider" min="0" max="0" step="1" value="0" />
+      <select id="case-select"></select>
     </div>
   </div>
 
+  <!-- Must load script.js after D3 -->
   <script src="script.js"></script>
 </body>
 </html>

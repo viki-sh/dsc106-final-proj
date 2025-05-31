@@ -1,67 +1,63 @@
 // script.js
 
-// ------------------------------
-// 1) Chart dimensions (must match your <svg width="1000" height="340"> in index.html):
-// ------------------------------
-const WIDTH = 1000;
-const HEIGHT = 340;
+// --------------------------------------------------
+// 1) Chart dimensions (must match your SVG sizes):
+// --------------------------------------------------
+const WIDTH   = 1000;
+const HEIGHT  = 340;
 
-// ------------------------------
-// 2) Load both JSON files simultaneously.
-//    If either fails, log an error.
-// ------------------------------
+// Window duration (in milliseconds) for the sliding‐window view.
+// For example, 240000 ms = 4 minutes.
+const WINDOW_MS = 240000;
+
+// --------------------------------------------------
+// 2) Load both JSON files (vital_data.json and proxy_drug_data.json).
+//    If either fails, alert the user.
+// --------------------------------------------------
 Promise.all([
   d3.json("vital_data.json"),
   d3.json("proxy_drug_data.json")
 ])
   .then(([vitalData, drugData]) => {
-    // Once both files are loaded, call the main initializer:
     initializeCharts(vitalData, drugData);
   })
   .catch(error => {
     console.error("Error loading JSON files:", error);
-    alert("Could not load 'vital_data.json' or 'proxy_drug_data.json'.\nCheck that both files are in the same folder as index.html.");
+    alert(
+      "Could not load 'vital_data.json' or 'proxy_drug_data.json'.\n" +
+      "Ensure both files are in the same folder as index.html."
+    );
   });
 
-// ------------------------------
-// 3) Main function: set up SVGs, scales, axes, dropdown, and animation controls.
-// ------------------------------
+// --------------------------------------------------
+// 3) Main initialization function: sets up everything
+//    (SVGs, scales, axes, slider, play/pause/speed, etc.)
+// --------------------------------------------------
 function initializeCharts(vitalData, drugData) {
-  // ------------------------------
-  // 3a) Select all of our DOM elements:
-  // ------------------------------
+  // 3a) Grab DOM elements:
   const vitalSvg    = d3.select("#chart");
   const drugSvg     = d3.select("#intervention-chart");
-  const caseSelect  = d3.select("#case-select");
   const legendBox   = d3.select("#legend");
   const liveValues  = d3.select("#live-values");
   const playBtn     = d3.select("#play");
   const pauseBtn    = d3.select("#pause");
   const speedBtn    = d3.select("#speed");
+  const slider      = d3.select("#time-slider");
+  const caseSelect  = d3.select("#case-select");
 
-  // ------------------------------
-  // 3b) Prepare containers for the D3 <path> elements (we’ll draw/update them per case):
-  // ------------------------------
+  // 3b) We'll keep references to each <path> in these objects:
   const vitalPaths = {};
   const drugPaths  = {};
 
-  // ------------------------------
-  // 3c) Animation state:
-  //    timeIndex = current frame
-  //    timer     = setInterval reference
-  //    speed     = ms between frames (halved each “⚡ Speed” click)
-  //    currentVData, currentDData = the data objects for the selected case
-  // ------------------------------
-  let timeIndex    = 0;
-  let timer        = null;
-  let speed        = 200;  // start at 200 ms per frame
-  let currentVData = null; // will be assigned to vitalData[caseID]
-  let currentDData = null; // will be assigned to drugData[caseID]
+  // 3c) Animation / state variables:
+  let timeIndex    = 0;       // current frame index
+  let timer        = null;    // holds our setInterval reference
+  let speed        = 200;     // ms between frames (halved by “⚡ Speed”)
+  let currentVData = null;    // vitalData[selectedCaseID]
+  let currentDData = null;    // drugData[selectedCaseID]
+  let firstTimestamp = null;  // earliest timestamp in the selected case
 
-  // ------------------------------
-  // 3d) Build the “Case ID” dropdown.
-  //    We assume vitalData is an object whose keys are case IDs (e.g. "1", "2", "3", …).
-  // ------------------------------
+  // 3d) Build the “Select Case ID” dropdown from the keys of vitalData:
   const caseIds = Object.keys(vitalData);
   caseIds.forEach(id => {
     caseSelect.append("option")
@@ -69,27 +65,27 @@ function initializeCharts(vitalData, drugData) {
       .text("Case " + id);
   });
 
-  // ------------------------------
   // 3e) Scales & Axes (shared across all cases):
-  //    - xScale: time scale → [60, WIDTH - 60]
-  //    - yVitals: linear scale for “Vitals” → [HEIGHT - 40, 20]
-  //    - yDrugs:  linear scale for “Interventions” → [HEIGHT - 40, 20]
-  // ------------------------------
+  //    • xScale: time → [60, WIDTH - 60]
+  //    • yVitals: vital values → [HEIGHT - 40, 20]
+  //    • yDrugs: intervention values → [HEIGHT - 40, 20]
   const xScale  = d3.scaleTime().range([60, WIDTH - 60]);
   const yVitals = d3.scaleLinear().range([HEIGHT - 40, 20]);
   const yDrugs  = d3.scaleLinear().range([HEIGHT - 40, 20]);
 
-  // Axes groups (we’ll call .call(d3.axis...) inside drawStaticLines()):
-  const xAxisVitals = vitalSvg.append("g").attr("transform", `translate(0, ${HEIGHT - 40})`);
-  const yAxisVitals = vitalSvg.append("g").attr("transform", "translate(60, 0)");
+  // Create axis‐group placeholders in each SVG:
+  const xAxisVitals = vitalSvg.append("g")
+    .attr("transform", `translate(0, ${HEIGHT - 40})`);
+  const yAxisVitals = vitalSvg.append("g")
+    .attr("transform", `translate(60, 0)`);
 
-  const xAxisDrugs = drugSvg.append("g").attr("transform", `translate(0, ${HEIGHT - 40})`);
-  const yAxisDrugs = drugSvg.append("g").attr("transform", `translate(${WIDTH - 60}, 0)`);
+  const xAxisDrugs = drugSvg.append("g")
+    .attr("transform", `translate(0, ${HEIGHT - 40})`);
+  const yAxisDrugs = drugSvg.append("g")
+    .attr("transform", `translate(${WIDTH - 60}, 0)`);
 
-  // ------------------------------
-  // 3f) Draw the axis labels (static text) on both SVGs:
-  // ------------------------------
-  /* Vitals Chart: “Time” (bottom) & “Vitals” (rotated) */
+  // 3f) Draw static axis labels (these never change):
+  //     “Time” along the bottom, and rotated “Vitals” / “Interventions” on the left.
   vitalSvg.append("text")
     .attr("class", "axis-label")
     .attr("x", WIDTH / 2)
@@ -105,7 +101,6 @@ function initializeCharts(vitalData, drugData) {
     .style("text-anchor", "middle")
     .text("Vitals");
 
-  /* Interventions Chart: “Time” (bottom) & “Interventions” (rotated) */
   drugSvg.append("text")
     .attr("class", "axis-label")
     .attr("x", WIDTH / 2)
@@ -121,9 +116,7 @@ function initializeCharts(vitalData, drugData) {
     .style("text-anchor", "middle")
     .text("Interventions");
 
-  // ------------------------------
-  // 3g) Create the vertical “playhead” line on each SVG (initially at x=0):
-  // ------------------------------
+  // 3g) Create vertical “playhead” lines (initially at x=0):
   const verticalLine = vitalSvg.append("line")
     .attr("stroke", "#333")
     .attr("y1", 0)
@@ -134,9 +127,7 @@ function initializeCharts(vitalData, drugData) {
     .attr("y1", 0)
     .attr("y2", HEIGHT);
 
-  // ------------------------------
   // 3h) Line generators (they reference xScale, yVitals, yDrugs):
-  // ------------------------------
   const lineVitals = d3.line()
     .x(d => xScale(new Date(d.time)))
     .y(d => yVitals(d.value));
@@ -145,50 +136,57 @@ function initializeCharts(vitalData, drugData) {
     .x(d => xScale(new Date(d.time)))
     .y(d => yDrugs(d.value));
 
-  // ------------------------------
-  // 3i) Function: drawStaticLines(vData, dData)
-  //     → Draws the static gridlines, axes, and all the <path> elements (one per parameter).
-  // ------------------------------
+  // 3i) drawStaticLines(vData, dData):
+  //     • Finds the full time extent (t0..t1) for this case
+  //     • Sets xScale.domain([t0, t1])
+  //     • Computes y‐domains (min/max + 10% padding)
+  //     • Draws grid‐lined axes
+  //     • Appends one <path> per parameter (solid for vitals, dashed for drugs)
+  //     • Builds the legend
+  //     • Configures the slider ([0..numFrames−1]) and enables it
   function drawStaticLines(vData, dData) {
-    // 1) Compute vitalParams & drugParams *for this case*
-    //    (we assume each vData[p] is an array of {time: "...", value: ...})
+    // 1) Parameter names for this case:
     const vitalParams = Object.keys(vData);
     const drugParams  = Object.keys(dData);
 
-    // 2) Compute the combined time extent (for X axis) from both datasets:
+    // 2) Compute full time extent across both vData and dData:
     const allTimes = [
       ...vitalParams.flatMap(p => vData[p].map(pt => new Date(pt.time))),
       ...drugParams.flatMap(p => dData[p].map(pt => new Date(pt.time)))
     ];
-    xScale.domain(d3.extent(allTimes));
+    allTimes.sort((a, b) => a - b);
+    const t0 = allTimes[0];
+    const t1 = allTimes[allTimes.length - 1];
+    firstTimestamp = t0;
 
-    // 3) Compute the Y‐domain for vitals: find min/max across all vital values, add 10% padding
-    const allVitalValues = vitalParams.flatMap(p => vData[p].map(pt => pt.value));
-    const vMin = d3.min(allVitalValues);
-    const vMax = d3.max(allVitalValues);
+    // 3) Set xScale.domain to the full [t0, t1]:
+    xScale.domain([t0, t1]);
+
+    // 4) Compute Y‐domain for vitals (min → max + 10% padding):
+    const allVitalVals = vitalParams.flatMap(p => vData[p].map(pt => pt.value));
+    const vMin = d3.min(allVitalVals), vMax = d3.max(allVitalVals);
     const padV = (vMax - vMin) * 0.10;
     yVitals.domain([vMin - padV, vMax + padV]);
 
-    // 4) Compute the Y‐domain for interventions: same idea, 10% padding
-    const allDrugValues = drugParams.flatMap(p => dData[p].map(pt => pt.value));
-    const dMin = d3.min(allDrugValues);
-    const dMax = d3.max(allDrugValues);
+    // 5) Compute Y‐domain for interventions (min → max + 10% padding):
+    const allDrugVals = drugParams.flatMap(p => dData[p].map(pt => pt.value));
+    const dMin = d3.min(allDrugVals), dMax = d3.max(allDrugVals);
     const padD = (dMax - dMin) * 0.10;
     yDrugs.domain([dMin - padD, dMax + padD]);
 
-    // 5) Draw the grid‐lined axes on the Vitals SVG:
+    // 6) Draw grid‐lined axes on the Vitals SVG:
     xAxisVitals.call(
       d3.axisBottom(xScale)
         .ticks(5)
-        .tickSize(-HEIGHT + 60)   // gridlines spanning top to bottom
+        .tickSize(-HEIGHT + 60)   // full‐height grid lines
     );
     yAxisVitals.call(
       d3.axisLeft(yVitals)
         .ticks(5)
-        .tickSize(-WIDTH + 120)   // gridlines spanning left to right
+        .tickSize(-WIDTH + 120)   // full‐width grid lines
     );
 
-    // 6) Draw the grid‐lined axes on the Interventions SVG:
+    // 7) Draw grid‐lined axes on the Interventions SVG:
     xAxisDrugs.call(
       d3.axisBottom(xScale)
         .ticks(5)
@@ -200,87 +198,121 @@ function initializeCharts(vitalData, drugData) {
         .tickSize(-WIDTH + 120)
     );
 
-    // 7) Clear out any old "vital" <path> elements, then redraw each:
-    vitalParams.forEach(param => {
-      // If this <path> doesn't exist, create it now:
-      if (!vitalPaths[param]) {
-        vitalPaths[param] = vitalSvg.append("path")
-          .attr("stroke", d3.schemeTableau10[vitalParams.indexOf(param) % 10])
-          .attr("fill", "none")
-          .attr("stroke-width", 2);
-      }
-      // Bind the data array vData[param] and set its "d" attribute via lineVitals():
-      vitalPaths[param]
+    // 8) Build vital‐parameter paths inside <g class="vital-lines">:
+    const vitalGroup = vitalSvg.select("g.vital-lines");
+    vitalGroup.selectAll("path").remove(); // clear old paths
+    vitalParams.forEach((param, i) => {
+      const color = d3.schemeTableau10[i % 10];
+      vitalPaths[param] = vitalGroup.append("path")
+        .attr("stroke", color)
+        .attr("fill", "none")
+        .attr("stroke-width", 2)
         .datum(vData[param])
         .attr("d", lineVitals);
     });
 
-    // 8) Clear out any old "intervention" <path> elements, then redraw each (dashed):
-    drugParams.forEach(param => {
-      if (!drugPaths[param]) {
-        drugPaths[param] = drugSvg.append("path")
-          .attr("stroke", d3.schemeSet2[drugParams.indexOf(param) % 8])
-          .attr("fill", "none")
-          .attr("stroke-width", 2)
-          .attr("stroke-dasharray", "4 2");
-      }
-      drugPaths[param]
+    // 9) Build intervention‐parameter paths inside <g class="drug-lines">:
+    const drugGroup = drugSvg.select("g.drug-lines");
+    drugGroup.selectAll("path").remove();
+    drugParams.forEach((param, i) => {
+      const color = d3.schemeSet2[i % 8];
+      drugPaths[param] = drugGroup.append("path")
+        .attr("stroke", color)
+        .attr("fill", "none")
+        .attr("stroke-width", 2)
+        .attr("stroke-dasharray", "4 2")
         .datum(dData[param])
         .attr("d", lineDrugs);
     });
 
-    // 9) Build the legend: clear old contents, then append one line per parameter
-    legendBox.html("");
-    vitalParams.forEach(param => {
-      const color = d3.schemeTableau10[vitalParams.indexOf(param) % 10];
+    // 10) Build the legend:
+    legendBox.html(""); // clear old legend
+    vitalParams.forEach((param, i) => {
+      const color = d3.schemeTableau10[i % 10];
       legendBox.append("div")
         .html(`<span style="color:${color};">&#9632;</span> ${param}`);
     });
-    drugParams.forEach(param => {
-      const color = d3.schemeSet2[drugParams.indexOf(param) % 8];
+    drugParams.forEach((param, i) => {
+      const color = d3.schemeSet2[i % 8];
       legendBox.append("div")
         .html(`<span style="color:${color};">&#9632;</span> ${param}`);
     });
+
+    // 11) Configure the slider (toggle bar):
+    //     • One frame per timestamp in vData[vitalParams[0]] (we assume all arrays align)
+    //     • Range = [0 .. numFrames − 1]
+    //     • Enable it now that we know numFrames
+    const numFrames = vData[vitalParams[0]].length;
+    slider
+      .attr("min", 0)
+      .attr("max", numFrames - 1)
+      .attr("value", 0)
+      .property("disabled", false);
   }
 
-  // ------------------------------
-  // 3j) Function: drawFrame()
-  //     → Moves the vertical “playhead” based on timeIndex, updates live-values.
-  // ------------------------------
+  // --------------------------------------------------
+  // 3j) drawFrame():
+  //     • Updates xScale.domain to [currentTime - WINDOW_MS, currentTime]
+  //     • Redraws grid‐lined axes so they scroll
+  //     • Redraws each <path> (the clipPath hides anything outside the 4‐minute window)
+  //     • Moves the vertical playhead
+  //     • Moves the slider thumb
+  //     • Updates “live values” on the right
+  //     • Advances timeIndex (or stops if we’re at the last frame)
+  // --------------------------------------------------
   function drawFrame() {
-    // Get the timestamp from the first vital parameter’s data at this timeIndex.
-    // (We assume every vitalParam array is the same length and aligned by index.)
-    const firstVitalParam = Object.keys(currentVData)[0];
-    const datum = currentVData[firstVitalParam][timeIndex];
-    const t = new Date(datum.time);
-    const x = xScale(t);
+    const vitalParams = Object.keys(currentVData);
+    const drugParams  = Object.keys(currentDData);
+    const firstParam  = vitalParams[0];
 
-    // Move the vertical lines on both SVGs:
+    // 1) Get this frame’s timestamp, as a Date:
+    const datum = currentVData[firstParam][timeIndex];
+    const t = new Date(datum.time);
+
+    // 2) Compute windowStart = max(firstTimestamp, t - WINDOW_MS):
+    let windowStart = new Date(t.getTime() - WINDOW_MS);
+    if (windowStart < firstTimestamp) windowStart = firstTimestamp;
+
+    // 3) Update xScale domain to [windowStart, t]:
+    xScale.domain([windowStart, t]);
+
+    // 4) Redraw grid‐lined axes on both charts with the updated domain:
+    xAxisVitals.call(d3.axisBottom(xScale).ticks(5).tickSize(-HEIGHT + 60));
+    xAxisDrugs .call(d3.axisBottom(xScale).ticks(5).tickSize(-HEIGHT + 60));
+
+    // 5) Redraw each path (the clipPath ensures only the 4-minute window is visible):
+    vitalParams.forEach(param => {
+      vitalPaths[param].attr("d", lineVitals);
+    });
+    drugParams.forEach(param => {
+      drugPaths[param].attr("d", lineDrugs);
+    });
+
+    // 6) Move the vertical playhead to x = xScale(t):
+    const x = xScale(t);
     verticalLine.attr("x1", x).attr("x2", x);
     drugLine   .attr("x1", x).attr("x2", x);
 
-    // Build the “live‐values” HTML string:
-    const vitalParams = Object.keys(currentVData);
-    const drugParams  = Object.keys(currentDData);
+    // 7) Update the slider’s thumb to this timeIndex:
+    slider.property("value", timeIndex);
 
-    const vitalsHTML = vitalParams.map(param => {
+    // 8) Update “live values” (list vitals + drugs at this timeIndex):
+    const vitalsHTML = vitalParams.map((param, i) => {
       const entry = currentVData[param][timeIndex];
       const val   = entry ? entry.value : "--";
-      const color = d3.schemeTableau10[vitalParams.indexOf(param) % 10];
+      const color = d3.schemeTableau10[i % 10];
       return `<span style="color:${color};">${param}</span>: ${val}`;
     });
-
-    const drugsHTML = drugParams.map(param => {
+    const drugsHTML = drugParams.map((param, i) => {
       const entry = currentDData[param][timeIndex];
       const val   = entry ? entry.value : "--";
-      const color = d3.schemeSet2[drugParams.indexOf(param) % 8];
+      const color = d3.schemeSet2[i % 8];
       return `<span style="color:${color};">${param}</span>: ${val}`;
     });
-
     liveValues.html([...vitalsHTML, ...drugsHTML].join("<br>"));
 
-    // Advance timeIndex until the last data point; then stop the timer.
-    const maxIndex = currentVData[firstVitalParam].length - 1;
+    // 9) Advance timeIndex, or stop if at the end:
+    const maxIndex = currentVData[firstParam].length - 1;
     if (timeIndex < maxIndex) {
       timeIndex++;
     } else {
@@ -288,64 +320,76 @@ function initializeCharts(vitalData, drugData) {
     }
   }
 
-  // ------------------------------
+  // --------------------------------------------------
   // 3k) Playback controls:
-  //     - startAnimation():   clear any old interval, setInterval(drawFrame, speed)
-  //     - pauseAnimation():   clearInterval(timer)
-  //     - changeSpeed():      halve speed (floor at 50ms), restart interval
-  // ------------------------------
+  //     • startAnimation(): clear any old timer, then setInterval(drawFrame, speed)
+  //     • pauseAnimation(): clearInterval(timer)
+  //     • changeSpeed(): halve speed (down to a minimum of 50ms) and restart
+  // --------------------------------------------------
   function startAnimation() {
     if (timer) clearInterval(timer);
     timer = setInterval(drawFrame, speed);
   }
-
   function pauseAnimation() {
     if (timer) clearInterval(timer);
   }
-
   function changeSpeed() {
     if (timer) clearInterval(timer);
     speed = Math.max(50, speed / 2);
     timer = setInterval(drawFrame, speed);
   }
 
-  // ------------------------------
-  // 3l) loadCase(caseID):  
-  //     - Stop any existing timer  
-  //     - Reset timeIndex to 0  
-  //     - Assign currentVData = vitalData[caseID], currentDData = drugData[caseID]  
-  //     - Call drawStaticLines() to redraw axes, grid, curves, and legend.  
-  // ------------------------------
+  // --------------------------------------------------
+  // 3l) loadCase(caseID):
+  //     • Stops any existing timer
+  //     • Resets timeIndex to 0
+  //     • Assigns currentVData = vitalData[caseID], currentDData = drugData[caseID]
+  //     • Calls drawStaticLines(...) to draw axes, curves, legend, slider
+  //     • Immediately calls drawFrame() once to place everything at frame 0
+  // --------------------------------------------------
   function loadCase(caseID) {
     if (timer) clearInterval(timer);
     timeIndex = 0;
     currentVData = vitalData[caseID];
     currentDData = drugData[caseID];
+
     if (!currentVData || !currentDData) {
-      console.warn(`Case ${caseID} does not exist in one of the datasets.`);
+      console.warn(`Case ${caseID} missing from data.`);
       return;
     }
     drawStaticLines(currentVData, currentDData);
+    // Show the playhead and live-values at frame 0 immediately:
+    drawFrame();
   }
 
-  // ------------------------------
-  // 3m) Wire up the UI controls:
-  // ------------------------------
+  // --------------------------------------------------
+  // 3m) Slider “input” event (toggle bar):
+  //     • Whenever the user drags the slider, pause animation,
+  //       set timeIndex = slider’s value, then drawFrame().
+  // --------------------------------------------------
+  slider.on("input", function() {
+    const newIndex = +this.value;
+    if (timer) clearInterval(timer);
+    timeIndex = newIndex;
+    drawFrame();
+  });
+
+  // --------------------------------------------------
+  // 3n) Hook up the buttons & dropdown:
+  // --------------------------------------------------
   playBtn.on("click", startAnimation);
   pauseBtn.on("click", pauseAnimation);
   speedBtn.on("click", changeSpeed);
-
   caseSelect.on("change", function() {
-    const selectedID = this.value;
-    loadCase(selectedID);
+    loadCase(this.value);
   });
 
-  // ------------------------------
-  // 3n) Initial invocation: load the first case in the list
-  // ------------------------------
+  // --------------------------------------------------
+  // 3o) Initial load: draw the first case in the list (if any):
+  // --------------------------------------------------
   if (caseIds.length > 0) {
     loadCase(caseIds[0]);
   } else {
-    console.warn("No case IDs found in vital_data.json");
+    console.warn("No cases found in vital_data.json.");
   }
 }
