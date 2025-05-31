@@ -41,16 +41,20 @@ Promise.all([
 
   const vitalPaths = {};
   const drugPaths = {};
-  const vitalValues = {};
-  const drugValues = {};
 
-  // Build legends
+  // Legend: vitals
   vitalParams.forEach(key => {
     legend.append("div")
       .html(`<span style="color:${colors(key)};">&#9632;</span> ${key}`);
   });
 
-  // Initialize SVG paths
+  // Legend: drugs
+  drugParams.forEach(key => {
+    legend.append("div")
+      .html(`<span style="color:${drugColors(key)};">&#9632;</span> ${key}`);
+  });
+
+  // Initialize vital paths
   vitalParams.forEach(key => {
     vitalPaths[key] = vitalSvg.append("path")
       .attr("stroke", colors(key))
@@ -58,6 +62,7 @@ Promise.all([
       .attr("stroke-width", 2);
   });
 
+  // Initialize drug paths
   drugParams.forEach(key => {
     drugPaths[key] = drugSvg.append("path")
       .attr("stroke", drugColors(key))
@@ -77,9 +82,10 @@ Promise.all([
     const vData = vitalData[selectedCase];
     const dData = drugData[selectedCase];
 
-    const maxTime = d3.max(vitalParams, key =>
-      d3.max(vData[key], d => d.time)
-    );
+    const maxTime = d3.max([
+      ...vitalParams.map(k => d3.max(vData[k], d => d.time)),
+      ...drugParams.map(k => d3.max(dData[k], d => d.time))
+    ]);
 
     xScale.domain([0, maxTime]);
 
@@ -100,17 +106,18 @@ Promise.all([
       drugPaths[key].datum(data).attr("d", line);
     });
 
-    const x = xScale(vData[vitalParams[0]][timeIndex]?.time || 0);
+    const time = vData[vitalParams[0]][timeIndex]?.time || 0;
+    const x = xScale(time);
     verticalLine.attr("x1", x).attr("x2", x);
 
     const vitalsLive = vitalParams.map(p => {
       const d = vData[p][timeIndex];
-      return `${p}: ${d?.value ?? '--'}`;
+      return `<span style="color:${colors(p)}">${p}</span>: ${d?.value ?? '--'}`;
     });
 
     const drugsLive = drugParams.map(p => {
       const d = dData[p][timeIndex];
-      return `${p}: ${d?.value ?? '--'}`;
+      return `<span style="color:${drugColors(p)}">${p}</span>: ${d?.value ?? '--'}`;
     });
 
     liveValues.html([...vitalsLive, ...drugsLive].join("<br>"));
