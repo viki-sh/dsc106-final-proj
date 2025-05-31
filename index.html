@@ -7,35 +7,35 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
-  <div class="layout-wrapper">
-    <div class="ekg-container">
-      <!-- Monitor background -->
-      <img src="c8820be4-9487-467f-9f29-ff0fb8addff2.png" class="monitor-frame" alt="EKG Frame"/>
+  <div class="ekg-container">
+    <img src="c1d97101-a0c5-4555-9a1a-4b5df96bf4f1.png" class="ekg-bg" alt="EKG Frame"/>
 
-      <!-- SVG Chart Container -->
-      <div class="chart-inside-monitor">
-        <svg id="chart"></svg>
-        <svg id="intervention-chart"></svg>
-      </div>
-
-      <!-- Overlayed Monitor Buttons -->
-      <div class="monitor-buttons">
-        <button id="play">▶️ Play</button>
-        <button id="pause">⏸️ Pause</button>
-        <button id="speed">⚡ Speed it Up!</button>
-      </div>
+    <!-- Chart area INSIDE the screen -->
+    <div class="ekg-charts">
+      <svg id="chart"></svg>
+      <svg id="intervention-chart"></svg>
     </div>
 
-    <!-- External UI Elements -->
-    <div class="side-ui">
+    <!-- Buttons mapped to monitor -->
+    <div class="ekg-buttons">
+      <button id="play">▶️ Play</button>
+      <button id="pause">⏸️ Pause</button>
+      <button id="speed">⚡ Speed</button>
+    </div>
+
+    <!-- External content: legend, live values, etc. -->
+    <div class="ekg-right">
       <div id="legend" class="legend-box"></div>
       <div id="live-values" class="live-values-box"></div>
-      <div id="case-select-container">
+      <div>
         <label for="case-select">Select Case ID:</label>
         <select id="case-select"></select>
       </div>
     </div>
   </div>
+
+  <script src="script.js"></script>
+</body>
 
   <script src="script.js"></script>
 </body>
