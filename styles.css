@@ -5,45 +5,46 @@ body {
   background-color: #eef4f8;
 }
 
-.ekg-monitor {
+.layout {
   display: flex;
-  align-items: flex-start;
   gap: 30px;
   padding: 20px;
-  border: 4px solid #88a;
-  border-radius: 16px;
-  background-color: #cde;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  align-items: flex-start;
   width: fit-content;
   margin: auto;
 }
 
 .ekg-screen {
-  position: relative;
   width: 700px;
-  height: 360px;
+  height: 700px;
   background-color: #bde0f2;
   border: 3px solid #446;
   border-radius: 8px;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: 10px;
 }
 
 .ekg-screen svg {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 100%;
+  height: 48%;
 }
 
-.ekg-buttons {
+.side-panel {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 15px;
+  gap: 20px;
+  align-items: flex-start;
 }
 
-.ekg-buttons button {
+.ekg-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ekg-controls button {
   background-color: #1976d2;
   color: #fff;
   border: none;
@@ -51,14 +52,7 @@ body {
   font-size: 16px;
   border-radius: 6px;
   cursor: pointer;
-  width: 100px;
-}
-
-.ekg-sidepanel {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  font-size: 14px;
+  width: 120px;
 }
 
 .legend-box,
@@ -67,5 +61,5 @@ body {
   padding: 10px;
   border: 1px solid #aaa;
   border-radius: 4px;
-  min-width: 180px;
+  min-width: 200px;
 }
