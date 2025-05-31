@@ -81,12 +81,3 @@ body {
   fill: #333;
   font-weight: bold;
 }
-
-.tick line {
-  stroke: #666;
-  stroke-opacity: 0.2;
-}
-
-.domain {
-  stroke: none;
-}

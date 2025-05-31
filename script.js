@@ -82,7 +82,7 @@ Promise.all([
     drugParams.forEach(p => {
       if (!drugPaths[p]) {
         drugPaths[p] = drugSvg.append("path").attr("stroke", colorDrugs(p))
-          .attr("fill", "none").attr("stroke-width", 2);
+          .attr("fill", "none").attr("stroke-width", 2).attr("stroke-dasharray", "4 2");
       }
       drugPaths[p].datum(dData[p]).attr("d", lineDrugs);
     });
@@ -122,7 +122,7 @@ Promise.all([
   }
 
   function changeSpeed(vData, dData) {
-    speed = speed === 200 ? 50 : 200;
+    speed = speed === 200 ? 100 : 200;
     startAnimation(vData, dData);
   }
 
@@ -138,18 +138,7 @@ Promise.all([
   d3.select("#play").on("click", () => loadCase(selectedCase));
   d3.select("#pause").on("click", pauseAnimation);
   d3.select("#speed").on("click", () => changeSpeed(vitalData[selectedCase], drugData[selectedCase]));
-  
-caseSelect.on("change", function () { loadCase(this.value); });
+  caseSelect.on("change", function () { loadCase(this.value); });
 
-const speedSlider = d3.select("#speed-range");
-speedSlider.on("input", function() {
-  speed = +this.value;
-  if (timer) {
-    clearInterval(timer);
-    startAnimation(vitalData[selectedCase], drugData[selectedCase]);
-  }
-});
-
-
-  // loadCase(selectedCase);
+  loadCase(selectedCase);
 });
