@@ -1,106 +1,88 @@
-const WIDTH = 1000;
+const WIDTH = 900;
 const HEIGHT = 300;
-const CHUNK_MINUTES = 10;
+const CHUNK_MIN = 10;
 
-let minTime, maxTime, totalChunks = 0;
-let currentChunk = 0;
 let vitals, drugs;
+let minTime, maxTime, chunks = [];
 
-const svgVitals = d3.select("#chart").attr("width", WIDTH).attr("height", HEIGHT);
-const svgDrugs = d3.select("#intervention-chart").attr("width", WIDTH).attr("height", HEIGHT);
+const svgVitals = d3.select("#chart");
+const svgDrugs = d3.select("#intervention-chart");
 
-const xScale = d3.scaleTime().range([60, WIDTH - 60]);
+const x = d3.scaleTime().range([60, WIDTH - 60]);
 const yVitals = d3.scaleLinear().range([HEIGHT - 40, 20]);
 const yDrugs = d3.scaleLinear().range([HEIGHT - 40, 20]);
 
 const lineVitals = d3.line()
-  .x(d => xScale(new Date(d.time)))
+  .x(d => x(new Date(d.time)))
   .y(d => yVitals(d.value));
 
 const lineDrugs = d3.line()
-  .x(d => xScale(new Date(d.time)))
+  .x(d => x(new Date(d.time)))
   .y(d => yDrugs(d.value));
 
 Promise.all([
   d3.json("vital_data.json"),
   d3.json("proxy_drug_data.json")
-]).then(([vitalData, drugData]) => {
-  vitals = vitalData;
-  drugs = drugData;
+]).then(([vData, dData]) => {
+  const caseID = "25"; // default case
+  vitals = vData[caseID];
+  drugs = dData[caseID];
 
-  const caseSelect = d3.select("#case-select");
-  Object.keys(vitals).forEach(id => {
-    caseSelect.append("option").attr("value", id).text("Case " + id);
-  });
-
-  caseSelect.on("change", () => {
-    currentChunk = 0;
-    loadCase(caseSelect.property("value"));
-  });
-
-  loadCase(Object.keys(vitals)[0]);
-});
-
-function loadCase(caseID) {
-  const vData = vitals[caseID];
-  const dData = drugs[caseID];
-
-  const allTimes = [
-    ...Object.values(vData).flatMap(arr => arr.map(d => new Date(d.time))),
-    ...Object.values(dData).flatMap(arr => arr.map(d => new Date(d.time)))
+  const times = [
+    ...Object.values(vitals).flatMap(arr => arr.map(d => new Date(d.time))),
+    ...Object.values(drugs).flatMap(arr => arr.map(d => new Date(d.time)))
   ];
+  minTime = d3.min(times);
+  maxTime = d3.max(times);
 
-  minTime = d3.min(allTimes);
-  maxTime = d3.max(allTimes);
-  totalChunks = Math.ceil((maxTime - minTime) / (CHUNK_MINUTES * 60000));
+  const chunkSize = CHUNK_MIN * 60000;
+  for (let t = +minTime; t < +maxTime; t += chunkSize) {
+    chunks.push([new Date(t), new Date(t + chunkSize)]);
+  }
 
-  d3.select("#chunk-slider")
-    .attr("max", totalChunks - 1)
-    .property("value", 0)
+  const slider = d3.select("#chunk-slider")
+    .attr("max", chunks.length - 1)
     .on("input", function () {
-      currentChunk = +this.value;
-      drawChunk(vData, dData);
+      renderWindow(+this.value);
     });
 
-  drawChunk(vData, dData);
-}
+  renderWindow(0);
+});
 
-function drawChunk(vData, dData) {
+function renderWindow(i) {
+  const [start, end] = chunks[i];
+  x.domain([start, end]);
+
   svgVitals.selectAll("*").remove();
   svgDrugs.selectAll("*").remove();
 
-  const windowStart = new Date(minTime.getTime() + currentChunk * CHUNK_MINUTES * 60000);
-  const windowEnd = new Date(windowStart.getTime() + CHUNK_MINUTES * 60000);
-  xScale.domain([windowStart, windowEnd]);
+  const allVitals = Object.values(vitals).flatMap(d => d.map(p => p.value));
+  const allDrugs = Object.values(drugs).flatMap(d => d.map(p => p.value));
+  yVitals.domain(d3.extent(allVitals));
+  yDrugs.domain(d3.extent(allDrugs));
 
-  const yVals = Object.values(vData).flatMap(d => d.map(x => x.value));
-  const yDvals = Object.values(dData).flatMap(d => d.map(x => x.value));
-
-  yVitals.domain(d3.extent(yVals));
-  yDrugs.domain(d3.extent(yDvals));
-
-  Object.entries(vData).forEach(([key, arr], i) => {
+  Object.entries(vitals).forEach(([key, arr], idx) => {
     const filtered = arr.filter(d => {
       const t = new Date(d.time);
-      return t >= windowStart && t <= windowEnd;
+      return t >= start && t <= end;
     });
     svgVitals.append("path")
       .datum(filtered)
       .attr("fill", "none")
-      .attr("stroke", d3.schemeTableau10[i % 10])
+      .attr("stroke", d3.schemeTableau10[idx % 10])
       .attr("stroke-width", 1.5)
       .attr("d", lineVitals);
   });
 
-  Object.entries(dData).forEach(([key, arr], i) => {
+  Object.entries(drugs).forEach(([key, arr], idx) => {
     const filtered = arr.filter(d => {
       const t = new Date(d.time);
-      return t >= windowStart && t <= windowEnd;
+      return t >= start && t <= end;
     });
     svgDrugs.append("path")
       .datum(filtered)
       .attr("fill", "none")
-      .attr("stroke", d3.schemeSet2[i % 8])
+      .attr("stroke", d3.schemeSet2[idx % 8])
       .attr("stroke-width", 1.5)
       .attr("stroke-dasharray", "4 2")
       .attr("d", lineDrugs);
@@ -108,19 +90,23 @@ function drawChunk(vData, dData) {
 
   svgVitals.append("g")
     .attr("transform", `translate(0, ${HEIGHT - 40})`)
-    .call(d3.axisBottom(xScale).ticks(4));
-  svgVitals.append("g").attr("transform", "translate(60,0)").call(d3.axisLeft(yVitals));
+    .call(d3.axisBottom(x));
+  svgVitals.append("g")
+    .attr("transform", "translate(60, 0)")
+    .call(d3.axisLeft(yVitals));
 
   svgDrugs.append("g")
     .attr("transform", `translate(0, ${HEIGHT - 40})`)
-    .call(d3.axisBottom(xScale).ticks(4));
-  svgDrugs.append("g").attr("transform", "translate(60,0)").call(d3.axisLeft(yDrugs));
+    .call(d3.axisBottom(x));
+  svgDrugs.append("g")
+    .attr("transform", "translate(60, 0)")
+    .call(d3.axisLeft(yDrugs));
 
-  d3.select("#chunk-label").text(`🕒 Window: ${formatTime(windowStart)} → ${formatTime(windowEnd)}`);
+  d3.select("#chunk-label").text(`🕒 Window: ${format(start)} → ${format(end)}`);
 }
 
-function formatTime(date) {
-  const mins = Math.floor((date - minTime) / 60000);
+function format(d) {
+  const mins = Math.floor((d - minTime) / 60000);
   const mm = String(mins).padStart(2, "0");
   return `${mm}:00`;
 }
