@@ -2,41 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Vitals + Interventions Viewer</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Vitals Viewer</title>
+  <link rel="stylesheet" href="styles.css" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
-  <div class="ekg-container">
-    <img src="c1d97101-a0c5-4555-9a1a-4b5df96bf4f1.png" class="ekg-bg" alt="EKG Frame"/>
-
-    <!-- Chart area INSIDE the screen -->
-    <div class="ekg-charts">
+  <div class="ekg-monitor">
+    <!-- Screen area for charts -->
+    <div class="ekg-screen">
       <svg id="chart"></svg>
       <svg id="intervention-chart"></svg>
     </div>
 
-    <!-- Buttons mapped to monitor -->
+    <!-- Right-side buttons -->
     <div class="ekg-buttons">
       <button id="play">▶️ Play</button>
       <button id="pause">⏸️ Pause</button>
       <button id="speed">⚡ Speed</button>
     </div>
 
-    <!-- External content: legend, live values, etc. -->
-    <div class="ekg-right">
+    <!-- Side panel (legend, values, case select) -->
+    <div class="ekg-sidepanel">
       <div id="legend" class="legend-box"></div>
       <div id="live-values" class="live-values-box"></div>
-      <div>
-        <label for="case-select">Select Case ID:</label>
-        <select id="case-select"></select>
-      </div>
+      <label for="case-select">Select Case ID:</label>
+      <select id="case-select"></select>
     </div>
   </div>
 
   <script src="script.js"></script>
 </body>
-
-  <script src="script.js"></script>
-</body>
 </html>
+
