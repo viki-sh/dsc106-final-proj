@@ -3,48 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <title>Vitals + Interventions Viewer</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
   <link rel="stylesheet" href="styles.css">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
-  <h1>Vitals + Interventions Viewer</h1>
+  <div class="layout-wrapper">
+    <div class="ekg-container">
+      <!-- Monitor background -->
+      <img src="c8820be4-9487-467f-9f29-ff0fb8addff2.png" class="monitor-frame" alt="EKG Frame"/>
 
-  <!-- CONTAINER FOR CHARTS AND READOUT -->
-  <div id="viz-layout">
-
-    <div id="viz-left">
-      <!-- VITALS -->
-      <div class="chart-row">
-        <div class="legend-block">
-          <h3>Vitals</h3>
-          <div id="legend" class="legend"></div>
-        </div>
-        <svg id="vital-chart" width="800" height="500"></svg>
+      <!-- SVG Chart Container -->
+      <div class="chart-inside-monitor">
+        <svg id="chart"></svg>
+        <svg id="intervention-chart"></svg>
       </div>
 
-      <!-- INTERVENTIONS -->
-      <div class="chart-row">
-        <div class="legend-block">
-          <h3>Interventions</h3>
-          <div id="intervention-legend" class="legend"></div>
-        </div>
-        <svg id="intervention-chart" width="800" height="200"></svg>
+      <!-- Overlayed Monitor Buttons -->
+      <div class="monitor-buttons">
+        <button id="play">▶️ Play</button>
+        <button id="pause">⏸️ Pause</button>
+        <button id="speed">⚡ Speed it Up!</button>
       </div>
+    </div>
 
-      <!-- CONTROLS -->
-      <div id="controls">
+    <!-- External UI Elements -->
+    <div class="side-ui">
+      <div id="legend" class="legend-box"></div>
+      <div id="live-values" class="live-values-box"></div>
+      <div id="case-select-container">
         <label for="case-select">Select Case ID:</label>
         <select id="case-select"></select>
-        <div id="nav"></div>
       </div>
     </div>
-
-    <!-- LIVE VALUES PANEL -->
-    <div id="readout">
-      <h3>Live Values</h3>
-      <div id="live-data"></div>
-    </div>
-
   </div>
 
   <script src="script.js"></script>
