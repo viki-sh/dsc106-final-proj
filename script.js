@@ -11,6 +11,11 @@ Promise.all([
   const legend = d3.select("#legend");
   const liveValues = d3.select("#live-values");
 
+  const caseIds = Object.keys(vitalData);
+  caseIds.forEach(id => {
+    caseSelect.append("option").attr("value", id).text("Case " + id);
+  });
+
   const vitalParams = Object.keys(vitalData["25"]);
   const drugParams = Object.keys(drugData["25"]);
 
@@ -22,90 +27,76 @@ Promise.all([
     .domain(drugParams)
     .range(d3.schemeSet2);
 
-  const caseIds = Object.keys(vitalData);
-  caseIds.forEach(id => {
-    caseSelect.append("option").attr("value", id).text("Case " + id);
-  });
+  const xScale = d3.scaleLinear().range([40, width - 20]);
+  const yScaleVitals = d3.scaleLinear().range([height - 30, 10]);
+  const yScaleDrugs = d3.scaleLinear().range([height - 30, 10]);
+
+  const lineVitals = d3.line()
+    .x(d => xScale(d.time))
+    .y(d => yScaleVitals(d.value));
+
+  const lineDrugs = d3.line()
+    .x(d => xScale(d.time))
+    .y(d => yScaleDrugs(d.value));
 
   let timeIndex = 0;
   let timer = null;
   let speed = 200;
   let selectedCase = caseIds[0];
 
-  const xScale = d3.scaleLinear().range([40, width - 20]);
-  const yScale = d3.scaleLinear().range([height - 30, 10]);
+  const verticalLine = vitalSvg.append("line")
+    .attr("stroke", "#333")
+    .attr("y1", 0)
+    .attr("y2", height);
 
-  const line = d3.line()
-    .x(d => xScale(d.time))
-    .y(d => yScale(d.value));
+  // Legends
+  [...vitalParams, ...drugParams].forEach(p => {
+    legend.append("div").html(
+      `<span style="color:${colors(p) || drugColors(p)};">&#9632;</span> ${p}`
+    );
+  });
 
   const vitalPaths = {};
   const drugPaths = {};
 
-  // Legend: vitals
-  vitalParams.forEach(key => {
-    legend.append("div")
-      .html(`<span style="color:${colors(key)};">&#9632;</span> ${key}`);
-  });
-
-  // Legend: drugs
-  drugParams.forEach(key => {
-    legend.append("div")
-      .html(`<span style="color:${drugColors(key)};">&#9632;</span> ${key}`);
-  });
-
-  // Initialize vital paths
-  vitalParams.forEach(key => {
-    vitalPaths[key] = vitalSvg.append("path")
-      .attr("stroke", colors(key))
-      .attr("fill", "none")
-      .attr("stroke-width", 2);
-  });
-
-  // Initialize drug paths
-  drugParams.forEach(key => {
-    drugPaths[key] = drugSvg.append("path")
-      .attr("stroke", drugColors(key))
-      .attr("fill", "none")
-      .attr("stroke-width", 2)
-      .attr("stroke-dasharray", "4 2");
-  });
-
-  const verticalLine = vitalSvg.append("line")
-    .attr("stroke", "#333")
-    .attr("y1", 0)
-    .attr("y2", height)
-    .attr("x1", 0)
-    .attr("x2", 0);
-
-  function drawFrame() {
-    const vData = vitalData[selectedCase];
-    const dData = drugData[selectedCase];
-
-    const maxTime = d3.max([
-      ...vitalParams.map(k => d3.max(vData[k], d => d.time)),
-      ...drugParams.map(k => d3.max(dData[k], d => d.time))
-    ]);
-
+  function drawStaticLines(vData, dData) {
+    const maxTime = Math.max(
+      ...vitalParams.map(p => d3.max(vData[p], d => d.time)),
+      ...drugParams.map(p => d3.max(dData[p], d => d.time))
+    );
     xScale.domain([0, maxTime]);
 
-    const allValues = [
-      ...vitalParams.flatMap(k => vData[k].map(d => d.value)),
-      ...drugParams.flatMap(k => dData[k].map(d => d.value))
-    ];
+    const vitalsAll = vitalParams.flatMap(p => vData[p].map(d => d.value));
+    const drugsAll = drugParams.flatMap(p => dData[p].map(d => d.value));
 
-    yScale.domain([0, d3.max(allValues)]);
+    yScaleVitals.domain([0, d3.max(vitalsAll)]);
+    yScaleDrugs.domain([0, d3.max(drugsAll)]);
 
-    vitalParams.forEach(key => {
-      const data = vData[key].slice(0, timeIndex);
-      vitalPaths[key].datum(data).attr("d", line);
+    // Draw full vital lines
+    vitalParams.forEach(p => {
+      if (!vitalPaths[p]) {
+        vitalPaths[p] = vitalSvg.append("path")
+          .attr("stroke", colors(p))
+          .attr("fill", "none")
+          .attr("stroke-width", 2);
+      }
+      vitalPaths[p].datum(vData[p]).attr("d", lineVitals);
     });
 
-    drugParams.forEach(key => {
-      const data = dData[key].slice(0, timeIndex);
-      drugPaths[key].datum(data).attr("d", line);
+    // Draw full drug lines
+    drugParams.forEach(p => {
+      if (!drugPaths[p]) {
+        drugPaths[p] = drugSvg.append("path")
+          .attr("stroke", drugColors(p))
+          .attr("fill", "none")
+          .attr("stroke-width", 2)
+          .attr("stroke-dasharray", "4 2");
+      }
+      drugPaths[p].datum(dData[p]).attr("d", lineDrugs);
     });
+  }
 
+  function drawFrame(vData, dData) {
     const time = vData[vitalParams[0]][timeIndex]?.time || 0;
     const x = xScale(time);
     verticalLine.attr("x1", x).attr("x2", x);
@@ -126,28 +117,35 @@ Promise.all([
     else clearInterval(timer);
   }
 
-  function start() {
+  function startAnimation(vData, dData) {
     if (timer) clearInterval(timer);
-    timer = setInterval(drawFrame, speed);
+    timer = setInterval(() => drawFrame(vData, dData), speed);
   }
 
-  function pause() {
+  function pauseAnimation() {
     if (timer) clearInterval(timer);
   }
 
-  function changeSpeed() {
+  function changeSpeed(vData, dData) {
     speed = speed === 200 ? 100 : 200;
-    start();
+    startAnimation(vData, dData);
   }
 
-  d3.select("#play").on("click", start);
-  d3.select("#pause").on("click", pause);
-  d3.select("#speed").on("click", changeSpeed);
-  caseSelect.on("change", function () {
-    selectedCase = this.value;
+  function updateCase(caseId) {
+    selectedCase = caseId;
+    const vData = vitalData[caseId];
+    const dData = drugData[caseId];
     timeIndex = 0;
-    start();
+    drawStaticLines(vData, dData);
+    startAnimation(vData, dData);
+  }
+
+  d3.select("#play").on("click", () => updateCase(selectedCase));
+  d3.select("#pause").on("click", pauseAnimation);
+  d3.select("#speed").on("click", () => changeSpeed(vitalData[selectedCase], drugData[selectedCase]));
+  caseSelect.on("change", function () {
+    updateCase(this.value);
   });
 
-  start();
+  updateCase(selectedCase);
 });
