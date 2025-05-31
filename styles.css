@@ -1,106 +1,51 @@
-/* ==================================== */
-/* General Page Styling                 */
-/* ==================================== */
 body {
-  margin: 0;
-  padding: 20px;
   font-family: Arial, sans-serif;
-  background-color: #eef4f8; /* very light blue behind everything */
+  margin: 0;
+  padding: 0;
 }
 
 .layout {
   display: flex;
-  gap: 30px;
-  align-items: flex-start;
-  margin: auto;
-  background-color: #daeaf6; /* slightly darker blue behind the “frame” */
-  border: 6px solid #334;    /* dark border around the entire “screen” */
-  border-radius: 18px;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-  padding: 20px;
-  width: fit-content;
+  flex-direction: row;
+  height: 100vh;
 }
 
-/* ==================================== */
-/* EKG‐Style Screen Container           */
-/* ==================================== */
 .ekg-screen {
-  width: 1000px;
-  height: 800px;
-  background-color: #bde0f2; /* light-blue panel behind charts */
-  border: 4px solid #223;    /* thick dark frame */
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
+  flex: 1;
+  background-color: #000;
+  color: #0f0;
   padding: 10px;
-  position: relative;
+  overflow-x: auto;
 }
 
-/* Chart Titles (“Vitals” / “Interventions”) */
 .ekg-title {
-  font-size: 20px;
-  font-weight: bold;
-  color: #223;
-  text-align: center;
-  margin-bottom: 4px;
+  font-size: 18px;
+  color: #0f0;
+  margin: 10px 0;
 }
 
-/* Ensure each SVG uses full width and a fixed height */
-.ekg-screen svg {
-  width: 100%;
-  height: 340px;
-  background-color: transparent; 
-  overflow: visible; /* so rotated axis labels are not clipped */
-  flex: none;        /* prevent flex from stretching/shrinking */
-}
-
-/* ==================================== */
-/* Slider (Toggle Bar) Styling          */
-/* ==================================== */
-#time-slider {
-  width: 90%;
-  margin: 10px auto;
-  display: block;
-}
-
-/* ==================================== */
-/* Side Panel Styling                   */
-/* ==================================== */
 .side-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  width: 300px;
+  background-color: #111;
+  color: #fff;
+  padding: 20px;
+  box-sizing: border-box;
+  border-left: 1px solid #333;
 }
 
-/* Play / Pause / Speed Buttons */
-.ekg-controls button {
-  background-color: #1976d2;
-  color: white;
-  border: none;
-  padding: 10px 14px;
-  font-size: 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  width: 120px;
+select,
+input[type="range"] {
+  width: 100%;
+  margin-top: 5px;
+  margin-bottom: 10px;
 }
 
-/* Legend & Live‐Values Boxes */
-.legend-box,
-.live-values-box {
-  background: #fff;
-  padding: 10px;
-  border: 1px solid #aaa;
-  border-radius: 4px;
-  min-width: 200px;
-  max-height: 300px;
-  overflow-y: auto;
+#chunk-slider {
+  width: 100%;
+}
+
+#chunk-label {
   font-size: 14px;
-}
-
-/* Axis Label Styling (used in script.js) */
-.axis-label {
-  font-size: 12px;
-  fill: #333;
-  font-weight: bold;
+  margin-top: 5px;
+  color: #ccc;
 }
