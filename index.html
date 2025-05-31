@@ -8,33 +8,38 @@
 </head>
 <body>
   <div class="layout">
-    <!-- EKG‐style Screen Container -->
+    <!-- EKG Screen -->
     <div class="ekg-screen">
-      <!-- Vitals Chart Title -->
       <div class="ekg-title">Vitals</div>
-      <!-- Vitals SVG (width and height attributes must match the JS constants) -->
-      <svg id="chart" width="1000" height="340"></svg>
-
-      <!-- Interventions Chart Title -->
+      <svg id="chart"></svg>
       <div class="ekg-title">Interventions</div>
-      <!-- Interventions SVG (width and height attributes must match the JS constants) -->
-      <svg id="intervention-chart" width="1000" height="340"></svg>
+      <svg id="intervention-chart"></svg>
+    </div>
 
-      <!-- Controls: Play, Pause, Speed -->
+    <!-- Side Panel -->
+    <div class="side-panel">
       <div class="ekg-controls">
         <button id="play">▶️ Play</button>
         <button id="pause">⏸️ Pause</button>
         <button id="speed">⚡ Speed</button>
       </div>
 
-      <!-- Legend Box (populated by JS) -->
       <div id="legend" class="legend-box"></div>
-      <!-- Live Values Box (populated by JS) -->
       <div id="live-values" class="live-values-box"></div>
 
-      <!-- Case ID Selector -->
       <label for="case-select">Select Case ID:</label>
-      <select id="case-select"></select>
+      <select id="case-select">
+        <option value="1">Case 1</option>
+        <option value="2">Case 2</option>
+        <option value="3">Case 3</option>
+        <option value="4">Case 4</option>
+        <option value="5">Case 5</option>
+        <option value="25">Case 25</option>
+      </select>
+
+      <br /><br />
+      <label for="timeline-slider">Surgery Progress:</label>
+      <input type="range" id="timeline-slider" min="0" max="0" step="1" value="0" />
     </div>
   </div>
 

@@ -3,10 +3,9 @@ body {
   margin: 0;
   padding: 20px;
   font-family: Arial, sans-serif;
-  background-color: #eef4f8; /* very light blue background behind the ekg‐screen */
+  background-color: #eef4f8; /* very light blue behind everything */
 }
 
-/* Container that holds the “EKG screen” + side panels */
 .layout {
   display: flex;
   gap: 30px;
@@ -14,18 +13,18 @@ body {
   align-items: flex-start;
   width: fit-content;
   margin: auto;
-  border: 6px solid #334; /* dark border around everything */
+  border: 6px solid #334; /* dark border around the whole “screen” */
   border-radius: 18px;
-  background-color: white;
-  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  background-color: #daeaf6; /* slightly darker than body */
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
 }
 
-/* The EKG‐style “screen” itself */
+/* EKG Screen Container */
 .ekg-screen {
   width: 1000px;
   height: 750px;
-  background-color: #bde0f2; /* light‐blue background behind the charts */
-  border: 4px solid #223;    /* thick dark border */
+  background-color: #bde0f2; /* light‐blue background behind charts */
+  border: 4px solid #223;    /* thick dark frame */
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -34,7 +33,7 @@ body {
   position: relative;
 }
 
-/* Title above each chart (Vitals / Interventions) */
+/* Chart Titles (“Vitals” / “Interventions”) */
 .ekg-title {
   font-size: 20px;
   font-weight: bold;
@@ -43,24 +42,26 @@ body {
   margin-bottom: 4px;
 }
 
-/* Make each SVG fill the available width inside .ekg-screen */
+/* Ensure each SVG uses the full width of .ekg-screen, with a fixed height */
 .ekg-screen svg {
   width: 100%;
-  background-color: transparent; /* we rely on the parent .ekg-screen’s light‐blue */
+  height: 340px;          /* force each chart to be 340px tall */
+  background-color: transparent;
+  overflow: visible;      /* allow rotated axis labels to show fully */
+  flex: none;             /* do not let flexbox shrink or stretch it */
 }
 
-/* Controls (Play / Pause / Speed buttons) */
-.ekg-controls {
+/* Side Panel (buttons + legend + live‐values + dropdown) */
+.side-panel {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 10px;
 }
 
-/* Button styling */
+/* Play / Pause / Speed Buttons */
 .ekg-controls button {
   background-color: #1976d2;
-  color: #fff;
+  color: white;
   border: none;
   padding: 10px 14px;
   font-size: 16px;
@@ -69,7 +70,7 @@ body {
   width: 120px;
 }
 
-/* Side panels for legend and live values */
+/* Legend and Live‐Values Boxes */
 .legend-box,
 .live-values-box {
   background: #fff;
@@ -82,7 +83,7 @@ body {
   font-size: 14px;
 }
 
-/* Axis label styling (used by D3) */
+/* Axis Label Styling (used in script.js) */
 .axis-label {
   font-size: 12px;
   fill: #333;
