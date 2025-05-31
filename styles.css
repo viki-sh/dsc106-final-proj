@@ -1,62 +1,48 @@
 body {
-  margin: 0;
   font-family: Arial, sans-serif;
-  background-color: #cbe8fa;
+  margin: 20px;
+  background-color: #f8f8f8;
 }
 
-.container {
+h1 {
+  text-align: center;
+}
+
+#controls {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+#controls button {
+  margin: 0 10px;
+  padding: 10px 20px;
+}
+
+#chart {
+  margin-bottom: 20px;
+}
+
+#vital-values {
   display: flex;
-  height: 100vh;
-}
-
-.chart-area {
-  flex: 1;
-  padding: 20px;
-  background-color: #b9e3f8;
-  border-right: 4px solid #333;
-}
-
-.sidebar {
-  width: 260px;
-  background-color: #d5ecf9;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
 }
 
-button {
-  padding: 10px;
-  font-size: 14px;
-  background-color: #2693ff;
-  color: white;
-  border: none;
-  border-radius: 4px;
+.vital-value {
+  padding: 5px 10px;
+  background-color: #e0e0e0;
+  border-radius: 5px;
 }
 
-svg {
-  background-color: #d1ecfc;
-  border: 2px solid #333;
-  margin-bottom: 15px;
+#case-selector {
+  display: block;
+  margin: 0 auto 20px;
+  padding: 5px 10px;
 }
 
-#chunk-slider {
-  width: 100%;
-  margin-top: 10px;
-}
-
-#chunk-label {
-  margin-top: 5px;
-  font-size: 14px;
-  color: #333;
-}
-
-#legend,
-#live-values {
-  font-size: 12px;
-  padding: 5px;
-  background: #f0faff;
-  border: 1px solid #aaa;
-  height: 120px;
-  overflow-y: auto;
+.chart-container {
+  width: 1700px;
+  overflow-x: auto;
 }

@@ -7,27 +7,24 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <div class="chart-area">
-      <h2>Vitals</h2>
-      <svg id="chart" width="900" height="300"></svg>
-
-      <h2>Interventions</h2>
-      <svg id="intervention-chart" width="900" height="300"></svg>
-
-      <label for="chunk-slider">Surgery Progress:</label>
-      <input type="range" id="chunk-slider" min="0" max="0" value="0" />
-      <div id="chunk-label">🕒 Window: 00:00 → 00:10</div>
+  <div class="layout">
+    <!-- EKG Screen -->
+    <div class="ekg-screen">
+      <div class="ekg-title">Vitals</div>
+      <svg id="chart"></svg>
+      <div class="ekg-title">Interventions</div>
+      <svg id="intervention-chart"></svg>
     </div>
 
-    <div class="sidebar">
-      <button id="play">▶️ Play</button>
-      <button id="pause">⏸️ Pause</button>
-      <button id="speed">⚡ Speed</button>
-
-      <div id="legend"></div>
-      <div id="live-values"></div>
-
+    <!-- Side Panel -->
+    <div class="side-panel">
+      <div class="ekg-controls">
+        <button id="play">▶️ Play</button>
+        <button id="pause">⏸️ Pause</button>
+        <button id="speed">⚡ Speed</button>
+      </div>
+      <div id="legend" class="legend-box"></div>
+      <div id="live-values" class="live-values-box"></div>
       <label for="case-select">Select Case ID:</label>
       <select id="case-select"></select>
     </div>
