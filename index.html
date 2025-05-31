@@ -8,23 +8,31 @@
 </head>
 <body>
   <div class="layout">
-    <!-- EKG Screen -->
+    <!-- EKG‐style Screen Container -->
     <div class="ekg-screen">
+      <!-- Vitals Chart Title -->
       <div class="ekg-title">Vitals</div>
-      <svg id="chart"></svg>
-      <div class="ekg-title">Interventions</div>
-      <svg id="intervention-chart"></svg>
-    </div>
+      <!-- Vitals SVG (width and height attributes must match the JS constants) -->
+      <svg id="chart" width="1000" height="340"></svg>
 
-    <!-- Side Panel -->
-    <div class="side-panel">
+      <!-- Interventions Chart Title -->
+      <div class="ekg-title">Interventions</div>
+      <!-- Interventions SVG (width and height attributes must match the JS constants) -->
+      <svg id="intervention-chart" width="1000" height="340"></svg>
+
+      <!-- Controls: Play, Pause, Speed -->
       <div class="ekg-controls">
         <button id="play">▶️ Play</button>
         <button id="pause">⏸️ Pause</button>
         <button id="speed">⚡ Speed</button>
       </div>
+
+      <!-- Legend Box (populated by JS) -->
       <div id="legend" class="legend-box"></div>
+      <!-- Live Values Box (populated by JS) -->
       <div id="live-values" class="live-values-box"></div>
+
+      <!-- Case ID Selector -->
       <label for="case-select">Select Case ID:</label>
       <select id="case-select"></select>
     </div>

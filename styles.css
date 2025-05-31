@@ -1,10 +1,12 @@
+/* ‐‐ General Page Styling ‐‐ */
 body {
   margin: 0;
   padding: 20px;
   font-family: Arial, sans-serif;
-  background-color: #eef4f8;
+  background-color: #eef4f8; /* very light blue background behind the ekg‐screen */
 }
 
+/* Container that holds the “EKG screen” + side panels */
 .layout {
   display: flex;
   gap: 30px;
@@ -12,17 +14,18 @@ body {
   align-items: flex-start;
   width: fit-content;
   margin: auto;
-  border: 6px solid #334;
+  border: 6px solid #334; /* dark border around everything */
   border-radius: 18px;
-  background-color: #daeaf6;
-  box-shadow: 0 0 15px rgba(0,0,0,0.3);
+  background-color: white;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
 }
 
+/* The EKG‐style “screen” itself */
 .ekg-screen {
   width: 1000px;
   height: 750px;
-  background-color: #bde0f2;
-  border: 4px solid #223;
+  background-color: #bde0f2; /* light‐blue background behind the charts */
+  border: 4px solid #223;    /* thick dark border */
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -31,31 +34,30 @@ body {
   position: relative;
 }
 
+/* Title above each chart (Vitals / Interventions) */
 .ekg-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
+  color: #223;
   text-align: center;
-  margin: 6px 0;
+  margin-bottom: 4px;
 }
 
+/* Make each SVG fill the available width inside .ekg-screen */
 .ekg-screen svg {
   width: 100%;
-  height: 46%;
+  background-color: transparent; /* we rely on the parent .ekg-screen’s light‐blue */
 }
 
-.side-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  align-items: flex-start;
-}
-
+/* Controls (Play / Pause / Speed buttons) */
 .ekg-controls {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-top: 10px;
 }
 
+/* Button styling */
 .ekg-controls button {
   background-color: #1976d2;
   color: #fff;
@@ -67,6 +69,7 @@ body {
   width: 120px;
 }
 
+/* Side panels for legend and live values */
 .legend-box,
 .live-values-box {
   background: #fff;
@@ -74,8 +77,12 @@ body {
   border: 1px solid #aaa;
   border-radius: 4px;
   min-width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 14px;
 }
 
+/* Axis label styling (used by D3) */
 .axis-label {
   font-size: 12px;
   fill: #333;
