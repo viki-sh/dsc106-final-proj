@@ -82,7 +82,7 @@ Promise.all([
     drugParams.forEach(p => {
       if (!drugPaths[p]) {
         drugPaths[p] = drugSvg.append("path").attr("stroke", colorDrugs(p))
-          .attr("fill", "none").attr("stroke-width", 2).attr("stroke-dasharray", "4 2");
+          .attr("fill", "none").attr("stroke-width", 2);
       }
       drugPaths[p].datum(dData[p]).attr("d", lineDrugs);
     });

@@ -1,3 +1,4 @@
+
 body {
   margin: 0;
   padding: 20px;
@@ -80,4 +81,15 @@ body {
   font-size: 12px;
   fill: #333;
   font-weight: bold;
+}
+
+/* lighter grid lines */
+.tick line {
+  stroke: #666;
+  stroke-opacity: 0.2;
+}
+
+/* hide the outer axis border */
+.domain {
+  stroke: none;
 }
