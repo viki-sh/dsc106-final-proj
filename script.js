@@ -1,142 +1,144 @@
-const margin = { top: 50, right: 200, bottom: 100, left: 50 };
-const width = 3000;
-const height = 300;
 
-let vitalsData, interventionsData;
-let currentCase = "1";
-let playing = false;
-let speed = 1;
-let interval;
-let currentIndex = 0;
+const width = 1000;
+const height = 340;
 
-const svgVitals = d3.select("#chart")
-  .attr("width", width + margin.left + margin.right)
-  .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-  .attr("transform", `translate(${margin.left},${margin.top})`);
+Promise.all([
+  d3.json("vital_data.json"),
+  d3.json("proxy_drug_data.json")
+]).then(([vitalData, drugData]) => {
+  const vitalSvg = d3.select("#chart");
+  const drugSvg = d3.select("#intervention-chart");
+  const caseSelect = d3.select("#case-select");
+  const legend = d3.select("#legend");
+  const liveValues = d3.select("#live-values");
 
-const svgInterventions = d3.select("#intervention-chart")
-  .attr("width", width + margin.left + margin.right)
-  .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-  .attr("transform", `translate(${margin.left},${margin.top})`);
+  const vitalParams = Object.keys(vitalData["25"]);
+  const drugParams = Object.keys(drugData["25"]);
 
-const x = d3.scaleTime().range([0, width]);
-const yVitals = d3.scaleLinear().range([height, 0]);
-const yInterventions = d3.scaleLinear().range([height, 0]);
-const color = d3.scaleOrdinal(d3.schemeCategory10);
+  const colorVitals = d3.scaleOrdinal().domain(vitalParams).range(d3.schemeTableau10);
+  const colorDrugs = d3.scaleOrdinal().domain(drugParams).range(d3.schemeSet2);
 
-const lineVitals = d3.line()
-  .x(d => x(new Date(d.time)))
-  .y(d => yVitals(d.value));
+  const xScale = d3.scaleTime().range([60, width - 60]);
+  const yVitals = d3.scaleLinear().range([height - 40, 20]);
+  const yDrugs = d3.scaleLinear().range([height - 40, 20]);
 
-const lineInterventions = d3.line()
-  .x(d => x(new Date(d.time)))
-  .y(d => yInterventions(d.value));
+  const lineVitals = d3.line().x(d => xScale(new Date(d.time))).y(d => yVitals(d.value));
+  const lineDrugs = d3.line().x(d => xScale(new Date(d.time))).y(d => yDrugs(d.value));
 
-d3.json("vital_data.json").then(vData => {
-  vitalsData = vData;
-  d3.json("proxy_drug_data.json").then(iData => {
-    interventionsData = iData;
-    init();
-  });
-});
+  const verticalLine = vitalSvg.append("line").attr("stroke", "#333").attr("y1", 0).attr("y2", height);
+  const drugLine = drugSvg.append("line").attr("stroke", "#333").attr("y1", 0).attr("y2", height);
 
-function init() {
-  const caseVitals = vitalsData[currentCase];
-  const caseInterventions = interventionsData[currentCase];
+  const xAxisVitals = vitalSvg.append("g").attr("transform", `translate(0,${height - 40})`);
+  const yAxisVitals = vitalSvg.append("g").attr("transform", "translate(60,0)");
+  const xAxisDrugs = drugSvg.append("g").attr("transform", `translate(0,${height - 40})`);
+  const yAxisDrugs = drugSvg.append("g").attr("transform", `translate(${width - 60},0)`);
 
-  const allVitals = Object.keys(caseVitals);
-  const allIntervs = Object.keys(caseInterventions);
+  // axis labels
+  vitalSvg.append("text").attr("class", "axis-label")
+    .attr("x", width / 2).attr("y", height - 5)
+    .style("text-anchor", "middle").text("Time");
 
-  const allVitalTimes = allVitals.flatMap(k => caseVitals[k].map(d => new Date(d.time)));
-  const allIntervTimes = allIntervs.flatMap(k => caseInterventions[k].map(d => new Date(d.time)));
-  const allTimes = allVitalTimes.concat(allIntervTimes);
+  vitalSvg.append("text").attr("class", "axis-label")
+    .attr("x", -height / 2).attr("y", 20)
+    .attr("transform", "rotate(-90)").style("text-anchor", "middle").text("Vitals");
 
-  const allVitalValues = allVitals.flatMap(k => caseVitals[k].map(d => d.value));
-  const allIntervValues = allIntervs.flatMap(k => caseInterventions[k].map(d => d.value));
+  drugSvg.append("text").attr("class", "axis-label")
+    .attr("x", width / 2).attr("y", height - 5)
+    .style("text-anchor", "middle").text("Time");
 
-  const minTime = d3.min(allTimes);
-  const maxTime = new Date(minTime.getTime() + 20 * 60 * 1000);  // stretch to 20 minutes
+  drugSvg.append("text").attr("class", "axis-label")
+    .attr("x", -height / 2).attr("y", 20)
+    .attr("transform", "rotate(-90)").style("text-anchor", "middle").text("Interventions");
 
-  x.domain([minTime, maxTime]);
-  yVitals.domain([0, d3.max(allVitalValues)]);
-  yInterventions.domain([0, d3.max(allIntervValues)]);
-  color.domain([...allVitals, ...allIntervs]);
-
-  allVitals.forEach(key => {
-    svgVitals.append("path")
-      .datum(caseVitals[key])
-      .attr("fill", "none")
-      .attr("stroke", color(key))
-      .attr("stroke-width", 1.5)
-      .attr("class", `line ${key}`);
+  const caseIds = Object.keys(vitalData);
+  caseIds.forEach(id => {
+    caseSelect.append("option").attr("value", id).text("Case " + id);
   });
 
-  allIntervs.forEach(key => {
-    svgInterventions.append("path")
-      .datum(caseInterventions[key])
-      .attr("fill", "none")
-      .attr("stroke", color(key))
-      .attr("stroke-width", 1.5)
-      .attr("class", `line ${key}`);
-  });
+  const vitalPaths = {}, drugPaths = {};
+  let timeIndex = 0, timer = null, speed = 200, selectedCase = caseIds[0];
 
-  svgVitals.append("g")
-    .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x));
-  svgVitals.append("g").call(d3.axisLeft(yVitals));
+  function drawStaticLines(vData, dData) {
+    const allTimes = [...vitalParams, ...drugParams].flatMap(p =>
+      (vData[p] || dData[p] || []).map(d => new Date(d.time))
+    );
+    xScale.domain(d3.extent(allTimes));
+    yVitals.domain([0, d3.max(vitalParams.flatMap(p => vData[p].map(d => d.value)))]);
+    yDrugs.domain([0, d3.max(drugParams.flatMap(p => dData[p].map(d => d.value)))]);
 
-  svgInterventions.append("g")
-    .attr("transform", `translate(0,${height})`)
-    .call(d3.axisBottom(x));
-  svgInterventions.append("g").call(d3.axisLeft(yInterventions));
-}
+    xAxisVitals.call(d3.axisBottom(xScale).ticks(5).tickSize(-height + 60));
+    yAxisVitals.call(d3.axisLeft(yVitals).ticks(5).tickSize(-width + 120));
+    xAxisDrugs.call(d3.axisBottom(xScale).ticks(5).tickSize(-height + 60));
+    yAxisDrugs.call(d3.axisRight(yDrugs).ticks(5).tickSize(-width + 120));
 
-function updateChart() {
-  const t0 = x.domain()[0].getTime();
-  const tNow = t0 + currentIndex * 10000;  // 10s per tick
+    vitalParams.forEach(p => {
+      if (!vitalPaths[p]) {
+        vitalPaths[p] = vitalSvg.append("path").attr("stroke", colorVitals(p))
+          .attr("fill", "none").attr("stroke-width", 2);
+      }
+      vitalPaths[p].datum(vData[p]).attr("d", lineVitals);
+    });
 
-  const caseVitals = vitalsData[currentCase];
-  const caseInterventions = interventionsData[currentCase];
+    drugParams.forEach(p => {
+      if (!drugPaths[p]) {
+        drugPaths[p] = drugSvg.append("path").attr("stroke", colorDrugs(p))
+          .attr("fill", "none").attr("stroke-width", 2).attr("stroke-dasharray", "4 2");
+      }
+      drugPaths[p].datum(dData[p]).attr("d", lineDrugs);
+    });
 
-  Object.keys(caseVitals).forEach(key => {
-    const data = caseVitals[key].filter(d => new Date(d.time).getTime() <= tNow);
-    svgVitals.select(`.line.${key}`).attr("d", lineVitals(data));
-  });
-
-  Object.keys(caseInterventions).forEach(key => {
-    const data = caseInterventions[key].filter(d => new Date(d.time).getTime() <= tNow);
-    svgInterventions.select(`.line.${key}`).attr("d", lineInterventions(data));
-  });
-
-  currentIndex++;
-}
-
-d3.select("#play").on("click", () => {
-  if (!playing) {
-    playing = true;
-    interval = setInterval(updateChart, 500);  // smoother steps
+    legend.html("");
+    vitalParams.forEach(p => legend.append("div").html(`<span style="color:${colorVitals(p)};">&#9632;</span> ${p}`));
+    drugParams.forEach(p => legend.append("div").html(`<span style="color:${colorDrugs(p)};">&#9632;</span> ${p}`));
   }
-});
 
-d3.select("#pause").on("click", () => {
-  playing = false;
-  clearInterval(interval);
-});
+  function drawFrame(vData, dData) {
+    const t = new Date(vData[vitalParams[0]][timeIndex]?.time || 0);
+    const x = xScale(t);
+    verticalLine.attr("x1", x).attr("x2", x);
+    drugLine.attr("x1", x).attr("x2", x);
 
-d3.select("#speed").on("click", () => {
-  speed = speed === 1 ? 2 : 1;
-  if (playing) {
-    clearInterval(interval);
-    interval = setInterval(updateChart, 1000 / speed);
+    const vitalsLive = vitalParams.map(p => {
+      const d = vData[p][timeIndex];
+      return `<span style="color:${colorVitals(p)}">${p}</span>: ${d?.value ?? "--"}`;
+    });
+    const drugsLive = drugParams.map(p => {
+      const d = dData[p][timeIndex];
+      return `<span style="color:${colorDrugs(p)}">${p}</span>: ${d?.value ?? "--"}`;
+    });
+
+    liveValues.html([...vitalsLive, ...drugsLive].join("<br>"));
+    if (timeIndex < vData[vitalParams[0]].length - 1) timeIndex++;
+    else clearInterval(timer);
   }
-});
 
-d3.select("#case-select").on("change", function () {
-  currentCase = this.value;
-  svgVitals.selectAll("*").remove();
-  svgInterventions.selectAll("*").remove();
-  currentIndex = 0;
-  init();
+  function startAnimation(vData, dData) {
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => drawFrame(vData, dData), speed);
+  }
+
+  function pauseAnimation() {
+    if (timer) clearInterval(timer);
+  }
+
+  function changeSpeed(vData, dData) {
+    speed = speed === 200 ? 100 : 200;
+    startAnimation(vData, dData);
+  }
+
+  function loadCase(id) {
+    selectedCase = id;
+    const vData = vitalData[id];
+    const dData = drugData[id];
+    timeIndex = 0;
+    drawStaticLines(vData, dData);
+    startAnimation(vData, dData);
+  }
+
+  d3.select("#play").on("click", () => loadCase(selectedCase));
+  d3.select("#pause").on("click", pauseAnimation);
+  d3.select("#speed").on("click", () => changeSpeed(vitalData[selectedCase], drugData[selectedCase]));
+  caseSelect.on("change", function () { loadCase(this.value); });
+
+  loadCase(selectedCase);
 });
