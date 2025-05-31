@@ -1,5 +1,5 @@
 const margin = { top: 50, right: 200, bottom: 100, left: 50 };
-const width = 1600;  // stretched from 1000
+const width = 3000;
 const height = 400;
 
 let vitalsData, interventionsData;
@@ -19,9 +19,8 @@ const g = svg
   .append("g")
   .attr("transform", `translate(${margin.left},${margin.top})`);
 
-const x = d3.scaleTime().range([0, 1600]);  // stretched
+let x = d3.scaleTime().range([0, width]);
 const y = d3.scaleLinear().range([height, 0]);
-
 const color = d3.scaleOrdinal(d3.schemeCategory10);
 
 const line = d3
@@ -40,17 +39,17 @@ d3.json("proxy_drug_data.json").then(data => {
 
 function init() {
   const caseData = vitalsData[currentCase];
-
   const vitals = Object.keys(caseData);
   const allValues = vitals.flatMap(key => caseData[key].map(d => d.value));
   const allTimes = vitals.flatMap(key => caseData[key].map(d => new Date(d.time)));
 
-  x.domain(d3.extent(allTimes));
+  const minTime = d3.min(allTimes);
+  const maxTime = new Date(minTime.getTime() + 20 * 60 * 1000); // stretch to 20 minutes
+  x.domain([minTime, maxTime]);
   y.domain([0, d3.max(allValues)]);
-
   color.domain(vitals);
 
-  vitals.forEach((key, i) => {
+  vitals.forEach(key => {
     g.append("path")
       .datum(caseData[key])
       .attr("fill", "none")
@@ -71,16 +70,14 @@ function init() {
     .attr("transform", `translate(${width + margin.left + 20}, ${margin.top})`);
 
   vitals.forEach((key, i) => {
-    legend
-      .append("rect")
+    legend.append("rect")
       .attr("x", 0)
       .attr("y", i * 20)
       .attr("width", 10)
       .attr("height", 10)
       .attr("fill", color(key));
 
-    legend
-      .append("text")
+    legend.append("text")
       .attr("x", 20)
       .attr("y", i * 20 + 9)
       .text(key);
@@ -102,8 +99,8 @@ function updateSidebar() {
   });
 }
 
-// Control buttons
-d3.select("#play-btn").on("click", () => {
+// FIXED: match button IDs to HTML
+d3.select("#play").on("click", () => {
   if (!playing) {
     playing = true;
     interval = setInterval(() => {
@@ -113,12 +110,12 @@ d3.select("#play-btn").on("click", () => {
   }
 });
 
-d3.select("#pause-btn").on("click", () => {
+d3.select("#pause").on("click", () => {
   playing = false;
   clearInterval(interval);
 });
 
-d3.select("#speed-btn").on("click", () => {
+d3.select("#speed").on("click", () => {
   speed = speed === 1 ? 2 : 1;
   if (playing) {
     clearInterval(interval);
@@ -142,8 +139,7 @@ function updateChart() {
   });
 }
 
-// Case selector
-d3.select("#case-selector").on("change", function () {
+d3.select("#case-select").on("change", function () {
   currentCase = this.value;
   g.selectAll("*").remove();
   currentIndex = 0;
