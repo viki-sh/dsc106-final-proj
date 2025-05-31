@@ -24,7 +24,6 @@ const svgInterventions = d3.select("#intervention-chart")
 const x = d3.scaleTime().range([0, width]);
 const yVitals = d3.scaleLinear().range([height, 0]);
 const yInterventions = d3.scaleLinear().range([height, 0]);
-
 const color = d3.scaleOrdinal(d3.schemeCategory10);
 
 const lineVitals = d3.line()
@@ -58,12 +57,11 @@ function init() {
   const allIntervValues = allIntervs.flatMap(k => caseInterventions[k].map(d => d.value));
 
   const minTime = d3.min(allTimes);
-  const maxTime = new Date(minTime.getTime() + 20 * 60 * 1000);  // 20 mins stretched
+  const maxTime = new Date(minTime.getTime() + 20 * 60 * 1000);  // stretch to 20 minutes
 
   x.domain([minTime, maxTime]);
   yVitals.domain([0, d3.max(allVitalValues)]);
   yInterventions.domain([0, d3.max(allIntervValues)]);
-
   color.domain([...allVitals, ...allIntervs]);
 
   allVitals.forEach(key => {
@@ -72,7 +70,6 @@ function init() {
       .attr("fill", "none")
       .attr("stroke", color(key))
       .attr("stroke-width", 1.5)
-      .attr("d", lineVitals)
       .attr("class", `line ${key}`);
   });
 
@@ -82,45 +79,44 @@ function init() {
       .attr("fill", "none")
       .attr("stroke", color(key))
       .attr("stroke-width", 1.5)
-      .attr("d", lineInterventions)
       .attr("class", `line ${key}`);
   });
 
   svgVitals.append("g")
     .attr("transform", `translate(0,${height})`)
     .call(d3.axisBottom(x));
-
   svgVitals.append("g").call(d3.axisLeft(yVitals));
 
   svgInterventions.append("g")
     .attr("transform", `translate(0,${height})`)
     .call(d3.axisBottom(x));
-
   svgInterventions.append("g").call(d3.axisLeft(yInterventions));
 }
 
 function updateChart() {
+  const t0 = x.domain()[0].getTime();
+  const tNow = t0 + currentIndex * 10000;  // 10s per tick
+
   const caseVitals = vitalsData[currentCase];
   const caseInterventions = interventionsData[currentCase];
 
   Object.keys(caseVitals).forEach(key => {
-    const data = caseVitals[key].slice(0, currentIndex);
+    const data = caseVitals[key].filter(d => new Date(d.time).getTime() <= tNow);
     svgVitals.select(`.line.${key}`).attr("d", lineVitals(data));
   });
 
   Object.keys(caseInterventions).forEach(key => {
-    const data = caseInterventions[key].slice(0, currentIndex);
+    const data = caseInterventions[key].filter(d => new Date(d.time).getTime() <= tNow);
     svgInterventions.select(`.line.${key}`).attr("d", lineInterventions(data));
   });
+
+  currentIndex++;
 }
 
 d3.select("#play").on("click", () => {
   if (!playing) {
     playing = true;
-    interval = setInterval(() => {
-      updateChart();
-      currentIndex++;
-    }, 1000 / speed);
+    interval = setInterval(updateChart, 500);  // smoother steps
   }
 });
 
@@ -133,10 +129,7 @@ d3.select("#speed").on("click", () => {
   speed = speed === 1 ? 2 : 1;
   if (playing) {
     clearInterval(interval);
-    interval = setInterval(() => {
-      updateChart();
-      currentIndex++;
-    }, 1000 / speed);
+    interval = setInterval(updateChart, 1000 / speed);
   }
 });
 
