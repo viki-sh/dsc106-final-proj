@@ -2,34 +2,62 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Vitals + Interventions Viewer</title>
+  <title>Vitals & Interventions Time-Lapse</title>
+  <!-- Link to our custom CSS -->
   <link rel="stylesheet" href="styles.css" />
+  <!-- D3 v7 -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
+
 <body>
-  <div class="layout">
-    <!-- EKG Screen -->
-    <div class="ekg-screen">
-      <div class="ekg-title">Vitals</div>
-      <svg id="chart"></svg>
-      <div class="ekg-title">Interventions</div>
-      <svg id="intervention-chart"></svg>
+  <div id="container">
+    <!-- Outer border to mimic an EKG monitor -->
+    <div id="ekg-border">
+      <!-- Inner padded area for charts -->
+      <div id="chart-area">
+        <!-- Vitals chart -->
+        <div id="vitals-chart-container">
+          <h2>Vitals</h2>
+          <svg id="vitals-chart"></svg>
+          <div class="axis-label x-label">Time (minutes:seconds)</div>
+          <div class="axis-label y-label">Vitals</div>
+        </div>
+
+        <!-- Interventions chart -->
+        <div id="interventions-chart-container">
+          <h2>Interventions</h2>
+          <svg id="interventions-chart"></svg>
+          <div class="axis-label x-label">Time (minutes:seconds)</div>
+          <div class="axis-label y-label">Interventions</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Side Panel -->
-    <div class="side-panel">
-      <div class="ekg-controls">
-        <button id="play">▶️ Play</button>
-        <button id="pause">⏸️ Pause</button>
-        <button id="speed">⚡ Speed</button>
+    <!-- Controls / Legend / Live Values / Case Selector -->
+    <div id="controls">
+      <div id="buttons">
+        <button id="play-button">▶️ Play</button>
+        <button id="pause-button" disabled>⏸ Pause</button>
+        <button id="speed-button">⚡ Speed</button>
       </div>
-      <div id="legend" class="legend-box"></div>
-      <div id="live-values" class="live-values-box"></div>
-      <label for="case-select">Select Case ID:</label>
-      <select id="case-select"></select>
+
+      <div id="time-slider-container">
+        <input type="range" id="time-slider" min="0" max="0" value="0" step="1" />
+      </div>
+
+      <div id="legend"></div>
+      <div id="live-values"></div>
+
+      <div id="case-selector">
+        <label for="case-select">Select Case ID:</label>
+        <select id="case-select">
+          <!-- Will be populated dynamically -->
+        </select>
+      </div>
     </div>
   </div>
 
+  <!-- Our custom JS to power everything -->
   <script src="script.js"></script>
 </body>
 </html>

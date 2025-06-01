@@ -1,83 +1,199 @@
+/* styles.css */
+
+/* ================================
+   Overall page layout
+   ================================ */
+
 body {
   margin: 0;
-  padding: 20px;
+  padding: 0;
+  background-color: #ccddf1; /* Soft blue background */
   font-family: Arial, sans-serif;
-  background-color: #eef4f8;
+  color: #333;
 }
 
-.layout {
+#container {
   display: flex;
-  gap: 30px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
   padding: 20px;
-  align-items: flex-start;
-  width: fit-content;
-  margin: auto;
-  border: 6px solid #334;
-  border-radius: 18px;
-  background-color: #daeaf6;
-  box-shadow: 0 0 15px rgba(0,0,0,0.3);
 }
 
-.ekg-screen {
-  width: 1000px;
-  height: 750px;
-  background-color: #bde0f2;
-  border: 4px solid #223;
-  border-radius: 8px;
+/* ================================
+   EKG-style border and chart area
+   ================================ */
+
+#ekg-border {
+  border: 6px solid #1a2330; /* Dark navy border for EKG look */
+  border-radius: 10px;
+  background-color: #b3d1f2; /* Slightly darker interior */
+  padding: 15px;
+  margin-right: 20px;
+}
+
+#chart-area {
   display: flex;
   flex-direction: column;
-  justify-content: space-evenly;
-  padding: 10px;
-  position: relative;
+  gap: 30px; /* Space between vitals and interventions */
 }
 
-.ekg-title {
-  font-size: 18px;
+/* Each chart container */
+#vitals-chart-container,
+#interventions-chart-container {
+  position: relative; /* So axis-label positioning works */
+}
+
+#vitals-chart,
+#interventions-chart {
+  background-color: #d6ebf8; /* Lightest blue background inside */
+  border: 2px solid #1a2330; /* Inner black-ish border */
+  border-radius: 5px;
+}
+
+/* Chart SVG dimensions */
+#vitals-chart {
+  width: 900px;
+  height: 300px;
+}
+
+#interventions-chart {
+  width: 900px;
+  height: 250px;
+}
+
+/* Axis labels */
+.axis-label {
+  position: absolute;
   font-weight: bold;
-  text-align: center;
-  margin: 6px 0;
+  fill: #1a2330;
 }
 
-.ekg-screen svg {
-  width: 100%;
-  height: 46%;
+.vitals-chart-container .x-label,
+#vitals-chart-container .x-label {
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
-.side-panel {
+.vitals-chart-container .y-label,
+#vitals-chart-container .y-label {
+  top: 50%;
+  left: -50px;
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+/* Same for interventions */
+#interventions-chart-container .x-label {
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#interventions-chart-container .y-label {
+  top: 50%;
+  left: -50px;
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+/* ================================
+   Controls panel (right side)
+   ================================ */
+
+#controls {
+  min-width: 280px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  align-items: flex-start;
+  gap: 15px;
 }
 
-.ekg-controls {
+/* Buttons */
+#buttons {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.ekg-controls button {
-  background-color: #1976d2;
-  color: #fff;
+#buttons button {
+  background-color: #1a73e8;
   border: none;
-  padding: 10px 14px;
+  color: white;
+  padding: 10px 15px;
   font-size: 16px;
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
-  width: 120px;
+  transition: background-color 0.2s ease;
 }
 
-.legend-box,
-.live-values-box {
-  background: #fff;
+#buttons button:hover:not(:disabled) {
+  background-color: #135ab8;
+}
+
+#buttons button:disabled {
+  background-color: #a0bcd8;
+  cursor: default;
+}
+
+/* Slider container */
+#time-slider-container {
+  margin-top: 10px;
+}
+
+#time-slider {
+  width: 100%;
+}
+
+/* Legend styling */
+#legend {
+  background-color: white;
+  border: 2px solid #1a2330;
+  border-radius: 5px;
   padding: 10px;
-  border: 1px solid #aaa;
-  border-radius: 4px;
-  min-width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 14px;
 }
 
-.axis-label {
-  font-size: 12px;
-  fill: #333;
+/* Each legend entry */
+.legend-entry {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.legend-color-box {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 1px solid #333;
+}
+
+/* Live values styling */
+#live-values {
+  background-color: white;
+  border: 2px solid #1a2330;
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 14px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Case selector */
+#case-selector {
+  margin-top: 10px;
+}
+
+#case-selector label {
+  display: block;
+  margin-bottom: 5px;
   font-weight: bold;
+}
+
+#case-selector select {
+  width: 100%;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #888;
+  font-size: 14px;
 }

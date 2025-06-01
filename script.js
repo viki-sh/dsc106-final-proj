@@ -1,144 +1,614 @@
+// script.js
 
-const width = 1000;
-const height = 340;
+// --------------------------------------------
+// GLOBAL CONFIGURATION
+// --------------------------------------------
+
+// Window size in seconds (10 minutes = 600 seconds)
+const WINDOW_SIZE = 600;
+
+// Animation settings
+let playInterval = null;
+let playSpeed = 1; // 1x speed by default
+const NORMAL_SPEED = 1;
+const FAST_SPEED = 5;
+
+// SVG and margin setup
+const margin = { top: 40, right: 20, bottom: 40, left: 60 };
+const chartWidth = 900 - margin.left - margin.right;
+const chartHeight = 250 - margin.top - margin.bottom;
+const interChartHeight = 200 - margin.top - margin.bottom;
+
+// Color scales for vitals and interventions
+const vitalColor = d3.scaleOrdinal(d3.schemeTableau10);
+const interColor = d3.scaleOrdinal(d3.schemeSet2);
+
+// Container for live values to the right
+const liveValuesContainer = d3.select("#live-values");
+
+// Case dropdown selector
+const caseSelect = d3.select("#case-select");
+
+// Buttons
+const playBtn = d3.select("#play-btn");
+const pauseBtn = d3.select("#pause-btn");
+const speedBtn = d3.select("#speed-btn");
+
+// Time slider
+const slider = d3.select("#time-slider");
+
+// Scales (initialized later per case)
+let xScaleVitals, yScaleVitals, xAxisVitals, yAxisVitals, xGridVitals, yGridVitals;
+let xScaleInter, yScaleInter, xAxisInter, yAxisInter, xGridInter, yGridInter;
+
+// SVG containers
+const vitalSVG = d3
+  .select("#vital-chart")
+  .append("svg")
+  .attr("width", chartWidth + margin.left + margin.right)
+  .attr("height", chartHeight + margin.top + margin.bottom)
+  .append("g")
+  .attr("transform", `translate(${margin.left},${margin.top})`);
+
+const interSVG = d3
+  .select("#intervention-chart")
+  .append("svg")
+  .attr("width", chartWidth + margin.left + margin.right)
+  .attr("height", interChartHeight + margin.top + margin.bottom)
+  .append("g")
+  .attr("transform", `translate(${margin.left},${margin.top})`);
+
+// Data holders
+let allVitalData = {};
+let allInterData = {};
+let currentCaseID = null;
+let currentVitals = [];      // Array of { param: string, values: [ {time: Number, value: Number}, ... ] }
+let currentInters = [];      // Similar structure for interventions
+let duration = 0;            // Total duration in seconds for the selected case
+let currentTime = 0;         // Current window start time
+
+// --------------------------------------------
+// LOAD JSON DATA & INITIALIZE
+// --------------------------------------------
 
 Promise.all([
   d3.json("vital_data.json"),
-  d3.json("proxy_drug_data.json")
-]).then(([vitalData, drugData]) => {
-  const vitalSvg = d3.select("#chart");
-  const drugSvg = d3.select("#intervention-chart");
-  const caseSelect = d3.select("#case-select");
-  const legend = d3.select("#legend");
-  const liveValues = d3.select("#live-values");
+  d3.json("proxy_drug_data.json"),
+]).then(([vitalDataJSON, interDataJSON]) => {
+  allVitalData = vitalDataJSON;
+  allInterData = interDataJSON;
 
-  const vitalParams = Object.keys(vitalData["25"]);
-  const drugParams = Object.keys(drugData["25"]);
+  // Populate case dropdown
+  const caseIDs = Object.keys(allVitalData).sort((a, b) => +a - +b);
+  caseSelect
+    .selectAll("option")
+    .data(caseIDs)
+    .enter()
+    .append("option")
+    .attr("value", d => d)
+    .text(d => "Case " + d);
 
-  const colorVitals = d3.scaleOrdinal().domain(vitalParams).range(d3.schemeTableau10);
-  const colorDrugs = d3.scaleOrdinal().domain(drugParams).range(d3.schemeSet2);
+  // Set default case to the first
+  currentCaseID = caseIDs[0];
+  caseSelect.property("value", currentCaseID);
 
-  const xScale = d3.scaleTime().range([60, width - 60]);
-  const yVitals = d3.scaleLinear().range([height - 40, 20]);
-  const yDrugs = d3.scaleLinear().range([height - 40, 20]);
-
-  const lineVitals = d3.line().x(d => xScale(new Date(d.time))).y(d => yVitals(d.value));
-  const lineDrugs = d3.line().x(d => xScale(new Date(d.time))).y(d => yDrugs(d.value));
-
-  const verticalLine = vitalSvg.append("line").attr("stroke", "#333").attr("y1", 0).attr("y2", height);
-  const drugLine = drugSvg.append("line").attr("stroke", "#333").attr("y1", 0).attr("y2", height);
-
-  const xAxisVitals = vitalSvg.append("g").attr("transform", `translate(0,${height - 40})`);
-  const yAxisVitals = vitalSvg.append("g").attr("transform", "translate(60,0)");
-  const xAxisDrugs = drugSvg.append("g").attr("transform", `translate(0,${height - 40})`);
-  const yAxisDrugs = drugSvg.append("g").attr("transform", `translate(${width - 60},0)`);
-
-  // axis labels
-  vitalSvg.append("text").attr("class", "axis-label")
-    .attr("x", width / 2).attr("y", height - 5)
-    .style("text-anchor", "middle").text("Time");
-
-  vitalSvg.append("text").attr("class", "axis-label")
-    .attr("x", -height / 2).attr("y", 20)
-    .attr("transform", "rotate(-90)").style("text-anchor", "middle").text("Vitals");
-
-  drugSvg.append("text").attr("class", "axis-label")
-    .attr("x", width / 2).attr("y", height - 5)
-    .style("text-anchor", "middle").text("Time");
-
-  drugSvg.append("text").attr("class", "axis-label")
-    .attr("x", -height / 2).attr("y", 20)
-    .attr("transform", "rotate(-90)").style("text-anchor", "middle").text("Interventions");
-
-  const caseIds = Object.keys(vitalData);
-  caseIds.forEach(id => {
-    caseSelect.append("option").attr("value", id).text("Case " + id);
+  // Set up listener for case change
+  caseSelect.on("change", () => {
+    currentCaseID = caseSelect.property("value");
+    resetAndDrawForCase(currentCaseID);
   });
 
-  const vitalPaths = {}, drugPaths = {};
-  let timeIndex = 0, timer = null, speed = 200, selectedCase = caseIds[0];
-
-  function drawStaticLines(vData, dData) {
-    const allTimes = [...vitalParams, ...drugParams].flatMap(p =>
-      (vData[p] || dData[p] || []).map(d => new Date(d.time))
-    );
-    xScale.domain(d3.extent(allTimes));
-    yVitals.domain([0, d3.max(vitalParams.flatMap(p => vData[p].map(d => d.value)))]);
-    yDrugs.domain([0, d3.max(drugParams.flatMap(p => dData[p].map(d => d.value)))]);
-
-    xAxisVitals.call(d3.axisBottom(xScale).ticks(5).tickSize(-height + 60));
-    yAxisVitals.call(d3.axisLeft(yVitals).ticks(5).tickSize(-width + 120));
-    xAxisDrugs.call(d3.axisBottom(xScale).ticks(5).tickSize(-height + 60));
-    yAxisDrugs.call(d3.axisRight(yDrugs).ticks(5).tickSize(-width + 120));
-
-    vitalParams.forEach(p => {
-      if (!vitalPaths[p]) {
-        vitalPaths[p] = vitalSvg.append("path").attr("stroke", colorVitals(p))
-          .attr("fill", "none").attr("stroke-width", 2);
-      }
-      vitalPaths[p].datum(vData[p]).attr("d", lineVitals);
-    });
-
-    drugParams.forEach(p => {
-      if (!drugPaths[p]) {
-        drugPaths[p] = drugSvg.append("path").attr("stroke", colorDrugs(p))
-          .attr("fill", "none").attr("stroke-width", 2).attr("stroke-dasharray", "4 2");
-      }
-      drugPaths[p].datum(dData[p]).attr("d", lineDrugs);
-    });
-
-    legend.html("");
-    vitalParams.forEach(p => legend.append("div").html(`<span style="color:${colorVitals(p)};">&#9632;</span> ${p}`));
-    drugParams.forEach(p => legend.append("div").html(`<span style="color:${colorDrugs(p)};">&#9632;</span> ${p}`));
-  }
-
-  function drawFrame(vData, dData) {
-    const t = new Date(vData[vitalParams[0]][timeIndex]?.time || 0);
-    const x = xScale(t);
-    verticalLine.attr("x1", x).attr("x2", x);
-    drugLine.attr("x1", x).attr("x2", x);
-
-    const vitalsLive = vitalParams.map(p => {
-      const d = vData[p][timeIndex];
-      return `<span style="color:${colorVitals(p)}">${p}</span>: ${d?.value ?? "--"}`;
-    });
-    const drugsLive = drugParams.map(p => {
-      const d = dData[p][timeIndex];
-      return `<span style="color:${colorDrugs(p)}">${p}</span>: ${d?.value ?? "--"}`;
-    });
-
-    liveValues.html([...vitalsLive, ...drugsLive].join("<br>"));
-    if (timeIndex < vData[vitalParams[0]].length - 1) timeIndex++;
-    else clearInterval(timer);
-  }
-
-  function startAnimation(vData, dData) {
-    if (timer) clearInterval(timer);
-    timer = setInterval(() => drawFrame(vData, dData), speed);
-  }
-
-  function pauseAnimation() {
-    if (timer) clearInterval(timer);
-  }
-
-  function changeSpeed(vData, dData) {
-    speed = speed === 200 ? 100 : 200;
-    startAnimation(vData, dData);
-  }
-
-  function loadCase(id) {
-    selectedCase = id;
-    const vData = vitalData[id];
-    const dData = drugData[id];
-    timeIndex = 0;
-    drawStaticLines(vData, dData);
-    startAnimation(vData, dData);
-  }
-
-  d3.select("#play").on("click", () => loadCase(selectedCase));
-  d3.select("#pause").on("click", pauseAnimation);
-  d3.select("#speed").on("click", () => changeSpeed(vitalData[selectedCase], drugData[selectedCase]));
-  caseSelect.on("change", function () { loadCase(this.value); });
-
-  loadCase(selectedCase);
+  // Initialize on default case
+  resetAndDrawForCase(currentCaseID);
+}).catch(error => {
+  console.error("Error loading data:", error);
 });
+
+// --------------------------------------------
+// RESET & DRAW FOR SELECTED CASE
+// --------------------------------------------
+
+function resetAndDrawForCase(caseID) {
+  // Stop any ongoing animation
+  stopAnimation();
+
+  // Clear existing SVG content
+  vitalSVG.selectAll("*").remove();
+  interSVG.selectAll("*").remove();
+  liveValuesContainer.selectAll("*").remove();
+
+  // Prepare vital data for this case
+  // allVitalData[caseID] is assumed to be an object: { param1: [ [timestamp, value], ... ], param2: [...], ... }
+  currentVitals = Object.entries(allVitalData[caseID]).map(([param, arr]) => {
+    // Convert array of [timestamp, value] to objects
+    return {
+      param: param,
+      values: arr.map(d => ({ time: +d[0], value: +d[1] })),
+    };
+  });
+
+  // Prepare intervention data similarly
+  currentInters = Object.entries(allInterData[caseID]).map(([param, arr]) => {
+    return {
+      param: param,
+      values: arr.map(d => ({ time: +d[0], value: +d[1] })),
+    };
+  });
+
+  // Compute total duration: maximum timestamp across all vitals
+  duration = d3.max(currentVitals, d => d3.max(d.values, v => v.time));
+
+  // Set currentTime to 0
+  currentTime = 0;
+
+  // Configure slider
+  slider
+    .attr("min", 0)
+    .attr("max", Math.max(0, duration - WINDOW_SIZE))
+    .attr("step", 1)
+    .property("value", 0);
+
+  slider.on("input", () => {
+    currentTime = +slider.property("value");
+    updateCharts(currentTime);
+  });
+
+  // Build scales and axes for vitals
+  configureVitalScales();
+
+  // Build scales and axes for interventions
+  configureInterScales();
+
+  // Draw legends and live values container
+  drawLegendAndLiveValues();
+
+  // Initial draw
+  drawCharts();
+
+  // Update charts to the initial window
+  updateCharts(currentTime);
+}
+
+// --------------------------------------------
+// CONFIGURE SCALES & AXES FOR VITALS CHART
+// --------------------------------------------
+
+function configureVitalScales() {
+  // X-scale: will be updated dynamically, initial domain [0, WINDOW_SIZE]
+  xScaleVitals = d3
+    .scaleLinear()
+    .domain([0, WINDOW_SIZE])
+    .range([0, chartWidth]);
+
+  // Y-scale: find global min/max across all vital parameters for the selected case
+  const allValues = currentVitals.flatMap(d => d.values.map(v => v.value));
+  const yMin = d3.min(allValues) * 0.9;
+  const yMax = d3.max(allValues) * 1.1;
+
+  yScaleVitals = d3
+    .scaleLinear()
+    .domain([yMin, yMax])
+    .range([chartHeight, 0]);
+
+  // Axes
+  xAxisVitals = d3.axisBottom(xScaleVitals).ticks(6).tickFormat(d => {
+    // Convert seconds to MM:SS
+    const m = Math.floor(d / 60);
+    const s = d % 60;
+    return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
+  });
+
+  yAxisVitals = d3.axisLeft(yScaleVitals).ticks(6);
+
+  // Grids
+  xGridVitals = d3
+    .axisBottom(xScaleVitals)
+    .tickSize(-chartHeight)
+    .tickFormat("")
+    .ticks(6);
+
+  yGridVitals = d3
+    .axisLeft(yScaleVitals)
+    .tickSize(-chartWidth)
+    .tickFormat("")
+    .ticks(6);
+}
+
+// --------------------------------------------
+// CONFIGURE SCALES & AXES FOR INTERVENTIONS CHART
+// --------------------------------------------
+
+function configureInterScales() {
+  // X-scale: same window width and range
+  xScaleInter = d3
+    .scaleLinear()
+    .domain([0, WINDOW_SIZE])
+    .range([0, chartWidth]);
+
+  // Y-scale: find max across all intervention parameters
+  const allValues = currentInters.flatMap(d => d.values.map(v => v.value));
+  const yMax = d3.max(allValues) * 1.1;
+
+  yScaleInter = d3
+    .scaleLinear()
+    .domain([0, yMax])
+    .range([interChartHeight, 0]);
+
+  // Axes
+  xAxisInter = d3.axisBottom(xScaleInter).ticks(6).tickFormat(d => {
+    const m = Math.floor(d / 60);
+    const s = d % 60;
+    return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
+  });
+
+  yAxisInter = d3.axisLeft(yScaleInter).ticks(6);
+
+  // Grids
+  xGridInter = d3
+    .axisBottom(xScaleInter)
+    .tickSize(-interChartHeight)
+    .tickFormat("")
+    .ticks(6);
+
+  yGridInter = d3
+    .axisLeft(yScaleInter)
+    .tickSize(-chartWidth)
+    .tickFormat("")
+    .ticks(6);
+}
+
+// --------------------------------------------
+// DRAW LEGEND & LIVE VALUES CONTAINER
+// --------------------------------------------
+
+function drawLegendAndLiveValues() {
+  // Legend: list all parameters and assign colors
+  const legendContainer = d3.select("#legend");
+  legendContainer.selectAll("*").remove();
+
+  // Vitals legend
+  legendContainer
+    .append("div")
+    .html("<strong>Vitals:</strong>");
+
+  const vitalLegend = legendContainer
+    .append("ul")
+    .attr("class", "legend-list");
+
+  currentVitals.forEach((d, i) => {
+    const li = vitalLegend.append("li");
+    li.append("span")
+      .style("display", "inline-block")
+      .style("width", "12px")
+      .style("height", "12px")
+      .style("background-color", vitalColor(i))
+      .style("margin-right", "6px");
+    li.append("span").text(d.param);
+  });
+
+  // Interventions legend
+  legendContainer
+    .append("div")
+    .style("margin-top", "12px")
+    .html("<strong>Interventions:</strong>");
+
+  const interLegend = legendContainer
+    .append("ul")
+    .attr("class", "legend-list");
+
+  currentInters.forEach((d, i) => {
+    const li = interLegend.append("li");
+    li.append("span")
+      .style("display", "inline-block")
+      .style("width", "12px")
+      .style("height", "12px")
+      .style("background-color", interColor(i))
+      .style("margin-right", "6px");
+    li.append("span").text(d.param);
+  });
+
+  // Live values: initialize placeholders for each vital and intervention
+  const liveVitals = liveValuesContainer
+    .append("div")
+    .attr("class", "live-section")
+    .html("<strong>Live Values (Vitals):</strong>");
+
+  currentVitals.forEach(d => {
+    liveVitals
+      .append("div")
+      .attr("id", `live-${sanitizeParam(d.param)}`)
+      .text(`${d.param}: –`);
+  });
+
+  const liveInters = liveValuesContainer
+    .append("div")
+    .attr("class", "live-section")
+    .style("margin-top", "12px")
+    .html("<strong>Live Values (Interventions):</strong>");
+
+  currentInters.forEach(d => {
+    liveInters
+      .append("div")
+      .attr("id", `live-inter-${sanitizeParam(d.param)}`)
+      .text(`${d.param}: –`);
+  });
+}
+
+// Utility to sanitize parameter names for IDs: replace spaces & slashes
+function sanitizeParam(str) {
+  return str.replace(/[^a-zA-Z0-9]/g, "_");
+}
+
+// --------------------------------------------
+// DRAW THE INITIAL EMPTY CHARTS
+// --------------------------------------------
+
+function drawCharts() {
+  // -------- VITALS CHART --------
+  // Draw grid lines first
+  vitalSVG
+    .append("g")
+    .attr("class", "x grid")
+    .attr("transform", `translate(0, ${chartHeight})`)
+    .call(xGridVitals);
+
+  vitalSVG
+    .append("g")
+    .attr("class", "y grid")
+    .call(yGridVitals);
+
+  // Draw axes
+  vitalSVG
+    .append("g")
+    .attr("class", "x axis")
+    .attr("transform", `translate(0, ${chartHeight})`)
+    .call(xAxisVitals);
+
+  vitalSVG
+    .append("g")
+    .attr("class", "y axis")
+    .call(yAxisVitals);
+
+  // Axis labels
+  vitalSVG
+    .append("text")
+    .attr("class", "x label")
+    .attr("text-anchor", "end")
+    .attr("x", chartWidth)
+    .attr("y", chartHeight + margin.bottom - 5)
+    .text("Time (MM:SS)");
+
+  vitalSVG
+    .append("text")
+    .attr("class", "y label")
+    .attr("text-anchor", "end")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -margin.left + 15)
+    .attr("x", -margin.top)
+    .text("Vitals");
+
+  // Chart title
+  vitalSVG
+    .append("text")
+    .attr("class", "chart-title")
+    .attr("x", chartWidth / 2)
+    .attr("y", -20)
+    .attr("text-anchor", "middle")
+    .text("Vitals");
+
+  // Draw line paths placeholder for each vital param
+  currentVitals.forEach((d, i) => {
+    vitalSVG
+      .append("path")
+      .datum(d.values)
+      .attr("class", "vital-line")
+      .attr("id", `vital-path-${sanitizeParam(d.param)}`)
+      .attr("fill", "none")
+      .attr("stroke", vitalColor(i))
+      .attr("stroke-width", 2);
+  });
+
+  // EKG-style border
+  vitalSVG
+    .append("rect")
+    .attr("class", "ekg-border")
+    .attr("x", -margin.left + 5)
+    .attr("y", -margin.top + 5)
+    .attr("width", chartWidth + margin.left + margin.right - 10)
+    .attr("height", chartHeight + margin.top + margin.bottom - 10)
+    .attr("fill", "none")
+    .attr("stroke", "#000")
+    .attr("stroke-width", 2);
+
+  // -------- INTERVENTIONS CHART --------
+  // Draw grid lines first
+  interSVG
+    .append("g")
+    .attr("class", "x grid")
+    .attr("transform", `translate(0, ${interChartHeight})`)
+    .call(xGridInter);
+
+  interSVG
+    .append("g")
+    .attr("class", "y grid")
+    .call(yGridInter);
+
+  // Draw axes
+  interSVG
+    .append("g")
+    .attr("class", "x axis")
+    .attr("transform", `translate(0, ${interChartHeight})`)
+    .call(xAxisInter);
+
+  interSVG
+    .append("g")
+    .attr("class", "y axis")
+    .call(yAxisInter);
+
+  // Axis labels
+  interSVG
+    .append("text")
+    .attr("class", "x label")
+    .attr("text-anchor", "end")
+    .attr("x", chartWidth)
+    .attr("y", interChartHeight + margin.bottom - 5)
+    .text("Time (MM:SS)");
+
+  interSVG
+    .append("text")
+    .attr("class", "y label")
+    .attr("text-anchor", "end")
+    .attr("transform", "rotate(-90)")
+    .attr("y", -margin.left + 15)
+    .attr("x", -margin.top)
+    .text("Interventions");
+
+  // Chart title
+  interSVG
+    .append("text")
+    .attr("class", "chart-title")
+    .attr("x", chartWidth / 2)
+    .attr("y", -20)
+    .attr("text-anchor", "middle")
+    .text("Interventions");
+
+  // Draw line paths placeholder for each intervention param
+  currentInters.forEach((d, i) => {
+    interSVG
+      .append("path")
+      .datum(d.values)
+      .attr("class", "inter-line")
+      .attr("id", `inter-path-${sanitizeParam(d.param)}`)
+      .attr("fill", "none")
+      .attr("stroke", interColor(i))
+      .attr("stroke-width", 2);
+  });
+
+  // EKG-style border
+  interSVG
+    .append("rect")
+    .attr("class", "ekg-border")
+    .attr("x", -margin.left + 5)
+    .attr("y", -margin.top + 5)
+    .attr("width", chartWidth + margin.left + margin.right - 10)
+    .attr("height", interChartHeight + margin.top + margin.bottom - 10)
+    .attr("fill", "none")
+    .attr("stroke", "#000")
+    .attr("stroke-width", 2);
+}
+
+// --------------------------------------------
+// UPDATE CHARTS FOR A GIVEN WINDOW START TIME
+// --------------------------------------------
+
+function updateCharts(startTime) {
+  // Compute the new domain for x-axis
+  const windowStart = startTime;
+  const windowEnd = startTime + WINDOW_SIZE;
+
+  // Update scales
+  xScaleVitals.domain([windowStart, windowEnd]);
+  xScaleInter.domain([windowStart, windowEnd]);
+
+  // Redraw axes and grids
+  vitalSVG.select(".x.axis").call(xAxisVitals);
+  vitalSVG.select(".y.axis").call(yAxisVitals);
+  vitalSVG.select(".x.grid").call(xGridVitals);
+  vitalSVG.select(".y.grid").call(yGridVitals);
+
+  interSVG.select(".x.axis").call(xAxisInter);
+  interSVG.select(".y.axis").call(yAxisInter);
+  interSVG.select(".x.grid").call(xGridInter);
+  interSVG.select(".y.grid").call(yGridInter);
+
+  // Update each vital line: filter data to current window
+  currentVitals.forEach((d) => {
+    const filtered = d.values.filter(v => v.time >= windowStart && v.time <= windowEnd);
+    const lineGen = d3
+      .line()
+      .x(v => xScaleVitals(v.time))
+      .y(v => yScaleVitals(v.value))
+      .curve(d3.curveMonotoneX);
+
+    vitalSVG
+      .select(`#vital-path-${sanitizeParam(d.param)}`)
+      .datum(filtered)
+      .attr("d", lineGen);
+  });
+
+  // Update each intervention line similarly
+  currentInters.forEach((d) => {
+    const filtered = d.values.filter(v => v.time >= windowStart && v.time <= windowEnd);
+    const lineGen = d3
+      .line()
+      .x(v => xScaleInter(v.time))
+      .y(v => yScaleInter(v.value))
+      .curve(d3.curveStepAfter); // step curve often suits interventions
+
+    interSVG
+      .select(`#inter-path-${sanitizeParam(d.param)}`)
+      .datum(filtered)
+      .attr("d", lineGen);
+  });
+
+  // Update live values: find the last point before or at windowEnd for each series
+  currentVitals.forEach((d) => {
+    const upToWindow = d.values.filter(v => v.time <= windowEnd);
+    const lastPoint = upToWindow.length ? upToWindow[upToWindow.length - 1] : null;
+    const text = lastPoint ? lastPoint.value.toFixed(1) : "–";
+    d3.select(`#live-${sanitizeParam(d.param)}`).text(`${d.param}: ${text}`);
+  });
+
+  currentInters.forEach((d) => {
+    const upToWindow = d.values.filter(v => v.time <= windowEnd);
+    const lastPoint = upToWindow.length ? upToWindow[upToWindow.length - 1] : null;
+    const text = lastPoint ? lastPoint.value : "–";
+    d3.select(`#live-inter-${sanitizeParam(d.param)}`).text(`${d.param}: ${text}`);
+  });
+
+  // Update slider thumb without re-triggering input event
+  slider.property("value", windowStart);
+}
+
+// --------------------------------------------
+// PLAY / PAUSE / SPEED CONTROLS
+// --------------------------------------------
+
+playBtn.on("click", () => {
+  if (playInterval) return; // Already playing
+
+  playInterval = setInterval(() => {
+    currentTime += playSpeed;
+    if (currentTime > duration - WINDOW_SIZE) {
+      currentTime = duration - WINDOW_SIZE;
+      stopAnimation();
+    }
+    updateCharts(currentTime);
+  }, 1000); // Tick every 1000 ms (1 second)
+});
+
+pauseBtn.on("click", () => {
+  stopAnimation();
+});
+
+speedBtn.on("click", () => {
+  // Toggle between normal and fast
+  playSpeed = playSpeed === NORMAL_SPEED ? FAST_SPEED : NORMAL_SPEED;
+  speedBtn.text(`⚡ Speed ${playSpeed}x`);
+  // If currently playing, restart interval at new speed
+  if (playInterval) {
+    stopAnimation();
+    playBtn.dispatch("click");
+  }
+});
+
+function stopAnimation() {
+  if (playInterval) {
+    clearInterval(playInterval);
+    playInterval = null;
+  }
+}
+
+// --------------------------------------------
+// END OF script.js
+// --------------------------------------------
