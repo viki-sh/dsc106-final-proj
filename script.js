@@ -16,23 +16,23 @@ const FAST_SPEED = 5;
 // SVG and margin setup
 const margin = { top: 40, right: 20, bottom: 40, left: 60 };
 const chartWidth = 900 - margin.left - margin.right;
-const chartHeight = 300 - margin.top - margin.bottom;       // corresponds to #vitals-chart height 300
-const interChartHeight = 250 - margin.top - margin.bottom;  // corresponds to #interventions-chart height 250
+const chartHeight = 250 - margin.top - margin.bottom;
+const interChartHeight = 200 - margin.top - margin.bottom;
 
 // Color scales for vitals and interventions
 const vitalColor = d3.scaleOrdinal(d3.schemeTableau10);
 const interColor = d3.scaleOrdinal(d3.schemeSet2);
 
-// Container for live values (to the right)
+// Container for live values to the right
 const liveValuesContainer = d3.select("#live-values");
 
 // Case dropdown selector
 const caseSelect = d3.select("#case-select");
 
-// Buttons (matching updated IDs)
-const playBtn = d3.select("#play-button");
-const pauseBtn = d3.select("#pause-button");
-const speedBtn = d3.select("#speed-button");
+// Buttons (using your original IDs)
+const playBtn  = d3.select("#play-btn");
+const pauseBtn = d3.select("#pause-btn");
+const speedBtn = d3.select("#speed-btn");
 
 // Time slider
 const slider = d3.select("#time-slider");
@@ -41,9 +41,9 @@ const slider = d3.select("#time-slider");
 let xScaleVitals, yScaleVitals, xAxisVitals, yAxisVitals, xGridVitals, yGridVitals;
 let xScaleInter, yScaleInter, xAxisInter, yAxisInter, xGridInter, yGridInter;
 
-// SVG containers (inside the `<div id="vitals-chart">` and `<div id="interventions-chart">`)
+// SVG containers (inside the `<div id="vital-chart">` and `<div id="intervention-chart">`)
 const vitalSVG = d3
-  .select("#vitals-chart")
+  .select("#vital-chart")
   .append("svg")
   .attr("width", chartWidth + margin.left + margin.right)
   .attr("height", chartHeight + margin.top + margin.bottom)
@@ -51,7 +51,7 @@ const vitalSVG = d3
   .attr("transform", `translate(${margin.left},${margin.top})`);
 
 const interSVG = d3
-  .select("#interventions-chart")
+  .select("#intervention-chart")
   .append("svg")
   .attr("width", chartWidth + margin.left + margin.right)
   .attr("height", interChartHeight + margin.top + margin.bottom)
@@ -128,7 +128,7 @@ function resetAndDrawForCase(caseID) {
     values: arr.map(d => ({ time: +d[0], value: +d[1] })),
   }));
 
-  // Determine total duration (max timestamp across all vitals)
+  // Determine total duration (maximum timestamp across all vitals)
   duration = d3.max(currentVitals, d => d3.max(d.values, v => v.time));
 
   // Reset currentTime to 0
@@ -146,7 +146,7 @@ function resetAndDrawForCase(caseID) {
     updateCharts(currentTime);
   });
 
-  // Build scales & axes (based on this case’s data)
+  // Build scales & axes based on this case’s data
   configureVitalScales();
   configureInterScales();
 
@@ -156,7 +156,7 @@ function resetAndDrawForCase(caseID) {
   // Draw the empty chart skeletons (axes, gridlines, titles, borders)
   drawCharts();
 
-  // Perform the first update (window [0, 600])
+  // Perform the first update (window [0, WINDOW_SIZE])
   updateCharts(currentTime);
 }
 
@@ -457,7 +457,7 @@ function drawCharts() {
     .attr("text-anchor", "middle")
     .text("Interventions");
 
-  // Placeholder <path> for each intervention
+  // Placeholder <path> for each intervention parameter
   currentInters.forEach((d, i) => {
     interSVG
       .append("path")
@@ -560,10 +560,6 @@ function updateCharts(startTime) {
 playBtn.on("click", () => {
   if (playInterval) return; // Already playing
 
-  // Enable "Pause" button, disable "Play" button
-  playBtn.property("disabled", true);
-  pauseBtn.property("disabled", false);
-
   playInterval = setInterval(() => {
     currentTime += playSpeed;
     if (currentTime > duration - WINDOW_SIZE) {
@@ -595,7 +591,4 @@ function stopAnimation() {
     clearInterval(playInterval);
     playInterval = null;
   }
-  // Enable "Play" button, disable "Pause" button
-  playBtn.property("disabled", false);
-  pauseBtn.property("disabled", true);
 }
