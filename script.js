@@ -1,10 +1,3 @@
-// script.js
-
-// --------------------------------------------
-// GLOBAL CONFIGURATION
-// --------------------------------------------
-
-// Window size in seconds (10 minutes = 600 seconds)
 const WINDOW_SIZE = 600;
 
 // Animation settings
@@ -608,7 +601,3 @@ function stopAnimation() {
     playInterval = null;
   }
 }
-
-// --------------------------------------------
-// END OF script.js
-// --------------------------------------------
