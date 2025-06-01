@@ -3,6 +3,7 @@
 /* ================================
    Overall page layout
    ================================ */
+
 body {
   margin: 0;
   padding: 0;
@@ -13,54 +14,54 @@ body {
 
 #container {
   display: flex;
+  flex-direction: row;
   justify-content: center;
   align-items: flex-start;
   padding: 20px;
 }
 
-/* The “EKG monitor” border container */
+/* ================================
+   EKG-style border and chart area
+   ================================ */
+
 #ekg-border {
-  display: flex;
-  background-color: #b3d1f2; /* Slightly darker interior */
-  border: 6px solid #1a2330;  /* Dark navy border for EKG look */
+  border: 6px solid #1a2330; /* Dark navy border for EKG look */
   border-radius: 10px;
-  overflow: hidden;
+  background-color: #b3d1f2; /* Slightly darker interior */
+  padding: 15px;
+  margin-right: 20px;
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
 }
 
-/* ================================
-   Chart area (left side)
-   ================================ */
 #charts-wrapper {
   display: flex;
   flex-direction: column;
   gap: 30px; /* Space between vitals and interventions */
-  padding: 20px;
-  background-color: #b3d1f2;
 }
 
+/* Each chart container */
 #vital-chart {
-  width: 700px;
-  height: 300px;
-}
-
-#intervention-chart {
-  width: 700px;
+  width: 900px;
   height: 250px;
 }
 
+#intervention-chart {
+  width: 900px;
+  height: 200px;
+}
+
 /* ================================
-   Sidebar (right side)
+   Sidebar (buttons, slider, legend, live values, case selector)
    ================================ */
+
 #sidebar {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  padding: 20px;
-  background-color: #b3d1f2;
-  border-left: 4px solid #1a2330;
+  width: 300px;
 }
 
-/* Buttons */
 #sidebar button {
   background-color: #1a73e8;
   border: none;
@@ -70,6 +71,7 @@ body {
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  margin-bottom: 10px;
 }
 
 #sidebar button:hover:not(:disabled) {
@@ -83,24 +85,25 @@ body {
 
 /* Slider */
 #time-slider {
-  width: 100%;
+  margin: 10px 0;
 }
 
-/* Legend & Live-Values */
-#legend,
+/* Legend & Live-Values Sidebar */
+#legend, 
 #live-values {
   background-color: white;
   border: 2px solid #1a2330;
   border-radius: 5px;
   padding: 10px;
-  max-height: 200px;
-  overflow-y: auto;
   font-size: 14px;
+  max-height: 250px;
+  overflow-y: auto;
+  margin-bottom: 20px;
 }
 
-/* Case selector dropdown */
+/* Case selector */
 #case-selector {
-  margin-top: 10px;
+  margin-top: auto; /* Push to bottom of sidebar */
 }
 
 #case-selector label {
@@ -120,35 +123,28 @@ body {
 /* ================================
    Axis labels (for in-SVG positioning)
    ================================ */
-.axis-label {
+
+.x.label {
   font-size: 14px;
   fill: #222;
 }
 
-/* X-axis label under Vitals */
-#vital-chart .x-label {
-  bottom: -30px;
-  left: 50%;
-  transform: translateX(-50%);
+.y.label {
+  font-size: 14px;
+  fill: #222;
 }
 
-/* Y-axis label rotating for Vitals */
-#vital-chart .y-label {
-  top: 50%;
-  left: -50px;
-  transform: translateY(-50%) rotate(-90deg);
+/* Chart titles */
+.chart-title {
+  font-size: 18px;
+  fill: #222;
+  font-weight: bold;
+  text-transform: uppercase;
 }
 
-/* X-axis label under Interventions */
-#intervention-chart .x-label {
-  bottom: -30px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-/* Y-axis label rotating for Interventions */
-#intervention-chart .y-label {
-  top: 50%;
-  left: -50px;
-  transform: translateY(-50%) rotate(-90deg);
+/* Gridline styling */
+.grid line {
+  stroke: #888;
+  stroke-opacity: 0.2;
+  shape-rendering: crispEdges;
 }
