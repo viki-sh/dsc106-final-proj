@@ -1,42 +1,49 @@
+// script.js
+
+// --------------------------------------------
+// GLOBAL CONFIGURATION
+// --------------------------------------------
+
+// Window size in seconds (10 minutes = 600 seconds)
 const WINDOW_SIZE = 600;
 
 // Animation settings
 let playInterval = null;
-let playSpeed = 1; // 1x speed by default
+let playSpeed = 1; // 1× speed by default
 const NORMAL_SPEED = 1;
 const FAST_SPEED = 5;
 
 // SVG and margin setup
 const margin = { top: 40, right: 20, bottom: 40, left: 60 };
 const chartWidth = 900 - margin.left - margin.right;
-const chartHeight = 250 - margin.top - margin.bottom;
-const interChartHeight = 200 - margin.top - margin.bottom;
+const chartHeight = 300 - margin.top - margin.bottom;       // corresponds to #vitals-chart height 300
+const interChartHeight = 250 - margin.top - margin.bottom;  // corresponds to #interventions-chart height 250
 
 // Color scales for vitals and interventions
 const vitalColor = d3.scaleOrdinal(d3.schemeTableau10);
 const interColor = d3.scaleOrdinal(d3.schemeSet2);
 
-// Container for live values to the right
+// Container for live values (to the right)
 const liveValuesContainer = d3.select("#live-values");
 
 // Case dropdown selector
 const caseSelect = d3.select("#case-select");
 
-// Buttons
-const playBtn = d3.select("#play-btn");
-const pauseBtn = d3.select("#pause-btn");
-const speedBtn = d3.select("#speed-btn");
+// Buttons (matching updated IDs)
+const playBtn = d3.select("#play-button");
+const pauseBtn = d3.select("#pause-button");
+const speedBtn = d3.select("#speed-button");
 
 // Time slider
 const slider = d3.select("#time-slider");
 
-// Scales (initialized later per case)
+// Scales & axes (initialized later per case)
 let xScaleVitals, yScaleVitals, xAxisVitals, yAxisVitals, xGridVitals, yGridVitals;
 let xScaleInter, yScaleInter, xAxisInter, yAxisInter, xGridInter, yGridInter;
 
-// SVG containers
+// SVG containers (inside the `<div id="vitals-chart">` and `<div id="interventions-chart">`)
 const vitalSVG = d3
-  .select("#vital-chart")
+  .select("#vitals-chart")
   .append("svg")
   .attr("width", chartWidth + margin.left + margin.right)
   .attr("height", chartHeight + margin.top + margin.bottom)
@@ -44,7 +51,7 @@ const vitalSVG = d3
   .attr("transform", `translate(${margin.left},${margin.top})`);
 
 const interSVG = d3
-  .select("#intervention-chart")
+  .select("#interventions-chart")
   .append("svg")
   .attr("width", chartWidth + margin.left + margin.right)
   .attr("height", interChartHeight + margin.top + margin.bottom)
@@ -56,9 +63,9 @@ let allVitalData = {};
 let allInterData = {};
 let currentCaseID = null;
 let currentVitals = [];      // Array of { param: string, values: [ {time: Number, value: Number}, ... ] }
-let currentInters = [];      // Similar structure for interventions
-let duration = 0;            // Total duration in seconds for the selected case
-let currentTime = 0;         // Current window start time
+let currentInters = [];      // Array of { param: string, values: [ {time, value}, ... ] }
+let duration = 0;            // Total duration (in seconds) for the selected case
+let currentTime = 0;         // Current window start time (in seconds)
 
 // --------------------------------------------
 // LOAD JSON DATA & INITIALIZE
@@ -71,7 +78,7 @@ Promise.all([
   allVitalData = vitalDataJSON;
   allInterData = interDataJSON;
 
-  // Populate case dropdown
+  // Populate the case dropdown
   const caseIDs = Object.keys(allVitalData).sort((a, b) => +a - +b);
   caseSelect
     .selectAll("option")
@@ -81,60 +88,53 @@ Promise.all([
     .attr("value", d => d)
     .text(d => "Case " + d);
 
-  // Set default case to the first
+  // Initialize with the first case
   currentCaseID = caseIDs[0];
   caseSelect.property("value", currentCaseID);
 
-  // Set up listener for case change
+  // When the user selects a different case, re-draw everything
   caseSelect.on("change", () => {
     currentCaseID = caseSelect.property("value");
     resetAndDrawForCase(currentCaseID);
   });
 
-  // Initialize on default case
+  // Draw for the default case
   resetAndDrawForCase(currentCaseID);
 }).catch(error => {
   console.error("Error loading data:", error);
 });
 
 // --------------------------------------------
-// RESET & DRAW FOR SELECTED CASE
+// RESET & DRAW FOR A GIVEN CASE ID
 // --------------------------------------------
 
 function resetAndDrawForCase(caseID) {
-  // Stop any ongoing animation
+  // Stop any animation in progress
   stopAnimation();
 
-  // Clear existing SVG content
+  // Clear previous SVG elements and live values
   vitalSVG.selectAll("*").remove();
   interSVG.selectAll("*").remove();
   liveValuesContainer.selectAll("*").remove();
 
-  // Prepare vital data for this case
-  // allVitalData[caseID] is assumed to be an object: { param1: [ [timestamp, value], ... ], param2: [...], ... }
-  currentVitals = Object.entries(allVitalData[caseID]).map(([param, arr]) => {
-    // Convert array of [timestamp, value] to objects
-    return {
-      param: param,
-      values: arr.map(d => ({ time: +d[0], value: +d[1] })),
-    };
-  });
+  // Convert each parameter’s array of [time, value] into an array of { time, value }
+  currentVitals = Object.entries(allVitalData[caseID]).map(([param, arr]) => ({
+    param: param,
+    values: arr.map(d => ({ time: +d[0], value: +d[1] })),
+  }));
 
-  // Prepare intervention data similarly
-  currentInters = Object.entries(allInterData[caseID]).map(([param, arr]) => {
-    return {
-      param: param,
-      values: arr.map(d => ({ time: +d[0], value: +d[1] })),
-    };
-  });
+  currentInters = Object.entries(allInterData[caseID]).map(([param, arr]) => ({
+    param: param,
+    values: arr.map(d => ({ time: +d[0], value: +d[1] })),
+  }));
 
-  // Compute total duration: maximum timestamp across all vitals
+  // Determine total duration (max timestamp across all vitals)
   duration = d3.max(currentVitals, d => d3.max(d.values, v => v.time));
 
-  // Set currentTime to 0
+  // Reset currentTime to 0
   currentTime = 0;
 
-  // Configure slider
+  // Configure the slider: range from 0 → (duration – WINDOW_SIZE)
   slider
     .attr("min", 0)
     .attr("max", Math.max(0, duration - WINDOW_SIZE))
@@ -146,34 +146,32 @@ function resetAndDrawForCase(caseID) {
     updateCharts(currentTime);
   });
 
-  // Build scales and axes for vitals
+  // Build scales & axes (based on this case’s data)
   configureVitalScales();
-
-  // Build scales and axes for interventions
   configureInterScales();
 
-  // Draw legends and live values container
+  // Draw the legend & live-values placeholders
   drawLegendAndLiveValues();
 
-  // Initial draw
+  // Draw the empty chart skeletons (axes, gridlines, titles, borders)
   drawCharts();
 
-  // Update charts to the initial window
+  // Perform the first update (window [0, 600])
   updateCharts(currentTime);
 }
 
 // --------------------------------------------
-// CONFIGURE SCALES & AXES FOR VITALS CHART
+// CONFIGURE SCALES & AXES FOR VITALS
 // --------------------------------------------
 
 function configureVitalScales() {
-  // X-scale: will be updated dynamically, initial domain [0, WINDOW_SIZE]
+  // X-scale: initial domain [0, WINDOW_SIZE]
   xScaleVitals = d3
     .scaleLinear()
     .domain([0, WINDOW_SIZE])
     .range([0, chartWidth]);
 
-  // Y-scale: find global min/max across all vital parameters for the selected case
+  // Y-scale: find global min/max across all vitals for this case
   const allValues = currentVitals.flatMap(d => d.values.map(v => v.value));
   const yMin = d3.min(allValues) * 0.9;
   const yMax = d3.max(allValues) * 1.1;
@@ -184,41 +182,41 @@ function configureVitalScales() {
     .range([chartHeight, 0]);
 
   // Axes
-  xAxisVitals = d3.axisBottom(xScaleVitals).ticks(6).tickFormat(d => {
-    // Convert seconds to MM:SS
-    const m = Math.floor(d / 60);
-    const s = d % 60;
-    return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
-  });
+  xAxisVitals = d3.axisBottom(xScaleVitals)
+    .ticks(6)
+    .tickFormat(d => {
+      // Format seconds → "MM:SS"
+      const m = Math.floor(d / 60);
+      const s = d % 60;
+      return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
+    });
 
   yAxisVitals = d3.axisLeft(yScaleVitals).ticks(6);
 
-  // Grids
-  xGridVitals = d3
-    .axisBottom(xScaleVitals)
+  // Grid lines
+  xGridVitals = d3.axisBottom(xScaleVitals)
     .tickSize(-chartHeight)
     .tickFormat("")
     .ticks(6);
 
-  yGridVitals = d3
-    .axisLeft(yScaleVitals)
+  yGridVitals = d3.axisLeft(yScaleVitals)
     .tickSize(-chartWidth)
     .tickFormat("")
     .ticks(6);
 }
 
 // --------------------------------------------
-// CONFIGURE SCALES & AXES FOR INTERVENTIONS CHART
+// CONFIGURE SCALES & AXES FOR INTERVENTIONS
 // --------------------------------------------
 
 function configureInterScales() {
-  // X-scale: same window width and range
+  // X-scale: same window width [0, WINDOW_SIZE]
   xScaleInter = d3
     .scaleLinear()
     .domain([0, WINDOW_SIZE])
     .range([0, chartWidth]);
 
-  // Y-scale: find max across all intervention parameters
+  // Y-scale: find max value among all interventions
   const allValues = currentInters.flatMap(d => d.values.map(v => v.value));
   const yMax = d3.max(allValues) * 1.1;
 
@@ -228,34 +226,34 @@ function configureInterScales() {
     .range([interChartHeight, 0]);
 
   // Axes
-  xAxisInter = d3.axisBottom(xScaleInter).ticks(6).tickFormat(d => {
-    const m = Math.floor(d / 60);
-    const s = d % 60;
-    return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
-  });
+  xAxisInter = d3.axisBottom(xScaleInter)
+    .ticks(6)
+    .tickFormat(d => {
+      const m = Math.floor(d / 60);
+      const s = d % 60;
+      return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
+    });
 
   yAxisInter = d3.axisLeft(yScaleInter).ticks(6);
 
-  // Grids
-  xGridInter = d3
-    .axisBottom(xScaleInter)
+  // Grid lines
+  xGridInter = d3.axisBottom(xScaleInter)
     .tickSize(-interChartHeight)
     .tickFormat("")
     .ticks(6);
 
-  yGridInter = d3
-    .axisLeft(yScaleInter)
+  yGridInter = d3.axisLeft(yScaleInter)
     .tickSize(-chartWidth)
     .tickFormat("")
     .ticks(6);
 }
 
 // --------------------------------------------
-// DRAW LEGEND & LIVE VALUES CONTAINER
+// DRAW LEGEND & LIVE-VALUES CONTAINERS
 // --------------------------------------------
 
 function drawLegendAndLiveValues() {
-  // Legend: list all parameters and assign colors
+  // Clear any existing legend/live-values
   const legendContainer = d3.select("#legend");
   legendContainer.selectAll("*").remove();
 
@@ -263,11 +261,9 @@ function drawLegendAndLiveValues() {
   legendContainer
     .append("div")
     .html("<strong>Vitals:</strong>");
-
   const vitalLegend = legendContainer
     .append("ul")
     .attr("class", "legend-list");
-
   currentVitals.forEach((d, i) => {
     const li = vitalLegend.append("li");
     li.append("span")
@@ -284,11 +280,9 @@ function drawLegendAndLiveValues() {
     .append("div")
     .style("margin-top", "12px")
     .html("<strong>Interventions:</strong>");
-
   const interLegend = legendContainer
     .append("ul")
     .attr("class", "legend-list");
-
   currentInters.forEach((d, i) => {
     const li = interLegend.append("li");
     li.append("span")
@@ -300,12 +294,11 @@ function drawLegendAndLiveValues() {
     li.append("span").text(d.param);
   });
 
-  // Live values: initialize placeholders for each vital and intervention
+  // Live values: placeholders for each vital and intervention
   const liveVitals = liveValuesContainer
     .append("div")
     .attr("class", "live-section")
     .html("<strong>Live Values (Vitals):</strong>");
-
   currentVitals.forEach(d => {
     liveVitals
       .append("div")
@@ -318,7 +311,6 @@ function drawLegendAndLiveValues() {
     .attr("class", "live-section")
     .style("margin-top", "12px")
     .html("<strong>Live Values (Interventions):</strong>");
-
   currentInters.forEach(d => {
     liveInters
       .append("div")
@@ -327,18 +319,18 @@ function drawLegendAndLiveValues() {
   });
 }
 
-// Utility to sanitize parameter names for IDs: replace spaces & slashes
+// Utility: sanitize parameter names for use in element IDs
 function sanitizeParam(str) {
   return str.replace(/[^a-zA-Z0-9]/g, "_");
 }
 
 // --------------------------------------------
-// DRAW THE INITIAL EMPTY CHARTS
+// DRAW THE INITIAL (EMPTY) CHARTS
 // --------------------------------------------
 
 function drawCharts() {
-  // -------- VITALS CHART --------
-  // Draw grid lines first
+  // ------ VITALS CHART ------
+  // Gridlines
   vitalSVG
     .append("g")
     .attr("class", "x grid")
@@ -350,7 +342,7 @@ function drawCharts() {
     .attr("class", "y grid")
     .call(yGridVitals);
 
-  // Draw axes
+  // Axes
   vitalSVG
     .append("g")
     .attr("class", "x axis")
@@ -389,7 +381,7 @@ function drawCharts() {
     .attr("text-anchor", "middle")
     .text("Vitals");
 
-  // Draw line paths placeholder for each vital param
+  // Placeholder <path> for each vital parameter
   currentVitals.forEach((d, i) => {
     vitalSVG
       .append("path")
@@ -401,7 +393,7 @@ function drawCharts() {
       .attr("stroke-width", 2);
   });
 
-  // EKG-style border
+  // EKG-style border rectangle
   vitalSVG
     .append("rect")
     .attr("class", "ekg-border")
@@ -413,8 +405,8 @@ function drawCharts() {
     .attr("stroke", "#000")
     .attr("stroke-width", 2);
 
-  // -------- INTERVENTIONS CHART --------
-  // Draw grid lines first
+  // ------ INTERVENTIONS CHART ------
+  // Gridlines
   interSVG
     .append("g")
     .attr("class", "x grid")
@@ -426,7 +418,7 @@ function drawCharts() {
     .attr("class", "y grid")
     .call(yGridInter);
 
-  // Draw axes
+  // Axes
   interSVG
     .append("g")
     .attr("class", "x axis")
@@ -465,7 +457,7 @@ function drawCharts() {
     .attr("text-anchor", "middle")
     .text("Interventions");
 
-  // Draw line paths placeholder for each intervention param
+  // Placeholder <path> for each intervention
   currentInters.forEach((d, i) => {
     interSVG
       .append("path")
@@ -477,7 +469,7 @@ function drawCharts() {
       .attr("stroke-width", 2);
   });
 
-  // EKG-style border
+  // EKG-style border rectangle
   interSVG
     .append("rect")
     .attr("class", "ekg-border")
@@ -495,15 +487,15 @@ function drawCharts() {
 // --------------------------------------------
 
 function updateCharts(startTime) {
-  // Compute the new domain for x-axis
+  // Determine the window range
   const windowStart = startTime;
   const windowEnd = startTime + WINDOW_SIZE;
 
-  // Update scales
+  // Update X domains
   xScaleVitals.domain([windowStart, windowEnd]);
   xScaleInter.domain([windowStart, windowEnd]);
 
-  // Redraw axes and grids
+  // Redraw axes & grids
   vitalSVG.select(".x.axis").call(xAxisVitals);
   vitalSVG.select(".y.axis").call(yAxisVitals);
   vitalSVG.select(".x.grid").call(xGridVitals);
@@ -514,11 +506,10 @@ function updateCharts(startTime) {
   interSVG.select(".x.grid").call(xGridInter);
   interSVG.select(".y.grid").call(yGridInter);
 
-  // Update each vital line: filter data to current window
+  // Update each vital’s path (filter to [windowStart, windowEnd])
   currentVitals.forEach((d) => {
     const filtered = d.values.filter(v => v.time >= windowStart && v.time <= windowEnd);
-    const lineGen = d3
-      .line()
+    const lineGen = d3.line()
       .x(v => xScaleVitals(v.time))
       .y(v => yScaleVitals(v.value))
       .curve(d3.curveMonotoneX);
@@ -529,14 +520,13 @@ function updateCharts(startTime) {
       .attr("d", lineGen);
   });
 
-  // Update each intervention line similarly
+  // Update each intervention’s path
   currentInters.forEach((d) => {
     const filtered = d.values.filter(v => v.time >= windowStart && v.time <= windowEnd);
-    const lineGen = d3
-      .line()
+    const lineGen = d3.line()
       .x(v => xScaleInter(v.time))
       .y(v => yScaleInter(v.value))
-      .curve(d3.curveStepAfter); // step curve often suits interventions
+      .curve(d3.curveStepAfter);
 
     interSVG
       .select(`#inter-path-${sanitizeParam(d.param)}`)
@@ -544,7 +534,7 @@ function updateCharts(startTime) {
       .attr("d", lineGen);
   });
 
-  // Update live values: find the last point before or at windowEnd for each series
+  // Update live values: last data point at or before windowEnd
   currentVitals.forEach((d) => {
     const upToWindow = d.values.filter(v => v.time <= windowEnd);
     const lastPoint = upToWindow.length ? upToWindow[upToWindow.length - 1] : null;
@@ -559,7 +549,7 @@ function updateCharts(startTime) {
     d3.select(`#live-inter-${sanitizeParam(d.param)}`).text(`${d.param}: ${text}`);
   });
 
-  // Update slider thumb without re-triggering input event
+  // Move slider thumb without re-triggering the "input" event
   slider.property("value", windowStart);
 }
 
@@ -570,6 +560,10 @@ function updateCharts(startTime) {
 playBtn.on("click", () => {
   if (playInterval) return; // Already playing
 
+  // Enable "Pause" button, disable "Play" button
+  playBtn.property("disabled", true);
+  pauseBtn.property("disabled", false);
+
   playInterval = setInterval(() => {
     currentTime += playSpeed;
     if (currentTime > duration - WINDOW_SIZE) {
@@ -577,7 +571,7 @@ playBtn.on("click", () => {
       stopAnimation();
     }
     updateCharts(currentTime);
-  }, 1000); // Tick every 1000 ms (1 second)
+  }, 1000); // Tick every 1000ms
 });
 
 pauseBtn.on("click", () => {
@@ -585,10 +579,11 @@ pauseBtn.on("click", () => {
 });
 
 speedBtn.on("click", () => {
-  // Toggle between normal and fast
+  // Toggle between 1× and 5×
   playSpeed = playSpeed === NORMAL_SPEED ? FAST_SPEED : NORMAL_SPEED;
   speedBtn.text(`⚡ Speed ${playSpeed}x`);
-  // If currently playing, restart interval at new speed
+
+  // If already playing, restart the interval at new speed
   if (playInterval) {
     stopAnimation();
     playBtn.dispatch("click");
@@ -600,4 +595,7 @@ function stopAnimation() {
     clearInterval(playInterval);
     playInterval = null;
   }
+  // Enable "Play" button, disable "Pause" button
+  playBtn.property("disabled", false);
+  pauseBtn.property("disabled", true);
 }

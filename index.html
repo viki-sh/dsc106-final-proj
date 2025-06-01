@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Vitals & Interventions Time-Lapse</title>
+  <title>Vitals &amp; Interventions Time-Lapse</title>
   <!-- Link to our custom CSS -->
   <link rel="stylesheet" href="styles.css" />
   <!-- D3 v7 -->
@@ -13,47 +13,41 @@
   <div id="container">
     <!-- Outer border to mimic an EKG monitor -->
     <div id="ekg-border">
-      <!-- Inner padded area for charts -->
-      <div id="chart-area">
-        <!-- Vitals chart -->
-        <div id="vitals-chart-container">
-          <h2>Vitals</h2>
-          <svg id="vitals-chart"></svg>
-          <div class="axis-label x-label">Time (minutes:seconds)</div>
-          <div class="axis-label y-label">Vitals</div>
-        </div>
 
-        <!-- Interventions chart -->
-        <div id="interventions-chart-container">
-          <h2>Interventions</h2>
-          <svg id="interventions-chart"></svg>
-          <div class="axis-label x-label">Time (minutes:seconds)</div>
-          <div class="axis-label y-label">Interventions</div>
-        </div>
+      <!-- -----------------------------
+           Case selector & Buttons
+           ----------------------------- -->
+      <div id="case-selector">
+        <label for="case-select">Select Case ID:</label>
+        <select id="case-select">
+          <!-- Populated dynamically by script.js -->
+        </select>
       </div>
-    </div>
 
-    <!-- Controls / Legend / Live Values / Case Selector -->
-    <div id="controls">
       <div id="buttons">
         <button id="play-button">▶️ Play</button>
         <button id="pause-button" disabled>⏸ Pause</button>
         <button id="speed-button">⚡ Speed</button>
       </div>
 
-      <div id="time-slider-container">
-        <input type="range" id="time-slider" min="0" max="0" value="0" step="1" />
+      <!-- -----------------------------
+           Chart area (Vitals & Interventions)
+           ----------------------------- -->
+      <div id="chart-area">
+        <div id="vitals-chart"></div>
+        <div id="interventions-chart"></div>
       </div>
 
+      <!-- -----------------------------
+           Time slider (0 → duration – 600)
+           ----------------------------- -->
+      <input type="range" id="time-slider" min="0" max="0" step="1" value="0" />
+
+      <!-- -----------------------------
+           Legend & Live-Values Sidebar
+           ----------------------------- -->
       <div id="legend"></div>
       <div id="live-values"></div>
-
-      <div id="case-selector">
-        <label for="case-select">Select Case ID:</label>
-        <select id="case-select">
-          <!-- Will be populated dynamically -->
-        </select>
-      </div>
     </div>
   </div>
 

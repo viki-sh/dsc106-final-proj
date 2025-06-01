@@ -39,19 +39,6 @@ body {
 }
 
 /* Each chart container */
-#vitals-chart-container,
-#interventions-chart-container {
-  position: relative; /* So axis-label positioning works */
-}
-
-#vitals-chart,
-#interventions-chart {
-  background-color: #d6ebf8; /* Lightest blue background inside */
-  border: 2px solid #1a2330; /* Inner black-ish border */
-  border-radius: 5px;
-}
-
-/* Chart SVG dimensions */
 #vitals-chart {
   width: 900px;
   height: 300px;
@@ -62,56 +49,54 @@ body {
   height: 250px;
 }
 
-/* Axis labels */
+/* ================================
+   Axis labels (for in-SVG positioning)
+   ================================ */
+
 .axis-label {
-  position: absolute;
-  font-weight: bold;
-  fill: #1a2330;
+  font-size: 14px;
+  fill: #222;
 }
 
+/* X-axis label under Vitals */
 .vitals-chart-container .x-label,
-#vitals-chart-container .x-label {
+#vitals-chart .x-label {
   bottom: -30px;
   left: 50%;
   transform: translateX(-50%);
 }
 
+/* Y-axis label rotating for Vitals */
 .vitals-chart-container .y-label,
-#vitals-chart-container .y-label {
+#vitals-chart .y-label {
   top: 50%;
   left: -50px;
   transform: translateY(-50%) rotate(-90deg);
 }
 
-/* Same for interventions */
-#interventions-chart-container .x-label {
+/* X-axis label under Interventions */
+#interventions-chart .x-label {
   bottom: -30px;
   left: 50%;
   transform: translateX(-50%);
 }
 
-#interventions-chart-container .y-label {
+/* Y-axis label rotating for Interventions */
+#interventions-chart .y-label {
   top: 50%;
   left: -50px;
   transform: translateY(-50%) rotate(-90deg);
 }
 
 /* ================================
-   Controls panel (right side)
+   Buttons
    ================================ */
 
-#controls {
-  min-width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-/* Buttons */
 #buttons {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-bottom: 20px;
 }
 
 #buttons button {
@@ -134,54 +119,12 @@ body {
   cursor: default;
 }
 
-/* Slider container */
-#time-slider-container {
-  margin-top: 10px;
-}
+/* ================================
+   Case selector dropdown
+   ================================ */
 
-#time-slider {
-  width: 100%;
-}
-
-/* Legend styling */
-#legend {
-  background-color: white;
-  border: 2px solid #1a2330;
-  border-radius: 5px;
-  padding: 10px;
-  max-height: 300px;
-  overflow-y: auto;
-  font-size: 14px;
-}
-
-/* Each legend entry */
-.legend-entry {
-  display: flex;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.legend-color-box {
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
-  border: 1px solid #333;
-}
-
-/* Live values styling */
-#live-values {
-  background-color: white;
-  border: 2px solid #1a2330;
-  border-radius: 5px;
-  padding: 10px;
-  font-size: 14px;
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-/* Case selector */
 #case-selector {
-  margin-top: 10px;
+  margin-bottom: 20px;
 }
 
 #case-selector label {
@@ -196,4 +139,39 @@ body {
   border-radius: 4px;
   border: 1px solid #888;
   font-size: 14px;
+}
+
+/* ================================
+   Slider
+   ================================ */
+
+#time-slider {
+  width: 900px;
+  margin: 15px 0;
+}
+
+/* ================================
+   Legend & Live-Values Sidebar
+   ================================ */
+
+#legend {
+  background-color: white;
+  border: 2px solid #1a2330;
+  border-radius: 5px;
+  padding: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 14px;
+  margin-top: 20px;
+}
+
+#live-values {
+  background-color: white;
+  border: 2px solid #1a2330;
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 14px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 20px;
 }
