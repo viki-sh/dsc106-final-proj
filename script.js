@@ -15,21 +15,21 @@ const FAST_SPEED = 5;
 
 // SVG and margin setup
 const margin = { top: 40, right: 20, bottom: 40, left: 60 };
-const chartWidth = 900 - margin.left - margin.right;
-const chartHeight = 250 - margin.top - margin.bottom;
-const interChartHeight = 200 - margin.top - margin.bottom;
+const chartWidth = 700 - margin.left - margin.right; // matches #vital-chart width
+const vitalChartHeight = 300 - margin.top - margin.bottom;
+const interChartHeight = 250 - margin.top - margin.bottom;
 
 // Color scales for vitals and interventions
 const vitalColor = d3.scaleOrdinal(d3.schemeTableau10);
 const interColor = d3.scaleOrdinal(d3.schemeSet2);
 
-// Container for live values to the right
+// Container for live values (in the sidebar)
 const liveValuesContainer = d3.select("#live-values");
 
 // Case dropdown selector
 const caseSelect = d3.select("#case-select");
 
-// Buttons (using your original IDs)
+// Buttons (matching IDs in index.html)
 const playBtn  = d3.select("#play-btn");
 const pauseBtn = d3.select("#pause-btn");
 const speedBtn = d3.select("#speed-btn");
@@ -37,16 +37,16 @@ const speedBtn = d3.select("#speed-btn");
 // Time slider
 const slider = d3.select("#time-slider");
 
-// Scales & axes (initialized later per case)
+// Scales & axes (will be configured per case)
 let xScaleVitals, yScaleVitals, xAxisVitals, yAxisVitals, xGridVitals, yGridVitals;
 let xScaleInter, yScaleInter, xAxisInter, yAxisInter, xGridInter, yGridInter;
 
-// SVG containers (inside the `<div id="vital-chart">` and `<div id="intervention-chart">`)
+// SVG containers
 const vitalSVG = d3
   .select("#vital-chart")
   .append("svg")
   .attr("width", chartWidth + margin.left + margin.right)
-  .attr("height", chartHeight + margin.top + margin.bottom)
+  .attr("height", vitalChartHeight + margin.top + margin.bottom)
   .append("g")
   .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -78,7 +78,7 @@ Promise.all([
   allVitalData = vitalDataJSON;
   allInterData = interDataJSON;
 
-  // Populate the case dropdown
+  // Populate the case dropdown with all case IDs
   const caseIDs = Object.keys(allVitalData).sort((a, b) => +a - +b);
   caseSelect
     .selectAll("option")
@@ -92,7 +92,7 @@ Promise.all([
   currentCaseID = caseIDs[0];
   caseSelect.property("value", currentCaseID);
 
-  // When the user selects a different case, re-draw everything
+  // When the user changes the dropdown, redraw everything
   caseSelect.on("change", () => {
     currentCaseID = caseSelect.property("value");
     resetAndDrawForCase(currentCaseID);
@@ -112,12 +112,12 @@ function resetAndDrawForCase(caseID) {
   // Stop any animation in progress
   stopAnimation();
 
-  // Clear previous SVG elements and live values
+  // Clear previous SVG elements and live-values text
   vitalSVG.selectAll("*").remove();
   interSVG.selectAll("*").remove();
   liveValuesContainer.selectAll("*").remove();
 
-  // Convert each parameter’s array of [time, value] into an array of { time, value }
+  // Convert each parameter’s array [time, value] to { time, value }
   currentVitals = Object.entries(allVitalData[caseID]).map(([param, arr]) => ({
     param: param,
     values: arr.map(d => ({ time: +d[0], value: +d[1] })),
@@ -134,7 +134,7 @@ function resetAndDrawForCase(caseID) {
   // Reset currentTime to 0
   currentTime = 0;
 
-  // Configure the slider: range from 0 → (duration – WINDOW_SIZE)
+  // Configure slider: 0 → (duration – WINDOW_SIZE)
   slider
     .attr("min", 0)
     .attr("max", Math.max(0, duration - WINDOW_SIZE))
@@ -150,7 +150,7 @@ function resetAndDrawForCase(caseID) {
   configureVitalScales();
   configureInterScales();
 
-  // Draw the legend & live-values placeholders
+  // Draw legend & live-values placeholders
   drawLegendAndLiveValues();
 
   // Draw the empty chart skeletons (axes, gridlines, titles, borders)
@@ -171,7 +171,7 @@ function configureVitalScales() {
     .domain([0, WINDOW_SIZE])
     .range([0, chartWidth]);
 
-  // Y-scale: find global min/max across all vitals for this case
+  // Y-scale: find global min/max across all vital parameters
   const allValues = currentVitals.flatMap(d => d.values.map(v => v.value));
   const yMin = d3.min(allValues) * 0.9;
   const yMax = d3.max(allValues) * 1.1;
@@ -179,13 +179,12 @@ function configureVitalScales() {
   yScaleVitals = d3
     .scaleLinear()
     .domain([yMin, yMax])
-    .range([chartHeight, 0]);
+    .range([vitalChartHeight, 0]);
 
   // Axes
   xAxisVitals = d3.axisBottom(xScaleVitals)
     .ticks(6)
     .tickFormat(d => {
-      // Format seconds → "MM:SS"
       const m = Math.floor(d / 60);
       const s = d % 60;
       return `${m < 10 ? "0" + m : m}:${s < 10 ? "0" + s : s}`;
@@ -195,7 +194,7 @@ function configureVitalScales() {
 
   // Grid lines
   xGridVitals = d3.axisBottom(xScaleVitals)
-    .tickSize(-chartHeight)
+    .tickSize(-vitalChartHeight)
     .tickFormat("")
     .ticks(6);
 
@@ -216,7 +215,7 @@ function configureInterScales() {
     .domain([0, WINDOW_SIZE])
     .range([0, chartWidth]);
 
-  // Y-scale: find max value among all interventions
+  // Y-scale: find max across all interventions
   const allValues = currentInters.flatMap(d => d.values.map(v => v.value));
   const yMax = d3.max(allValues) * 1.1;
 
@@ -334,7 +333,7 @@ function drawCharts() {
   vitalSVG
     .append("g")
     .attr("class", "x grid")
-    .attr("transform", `translate(0, ${chartHeight})`)
+    .attr("transform", `translate(0, ${vitalChartHeight})`)
     .call(xGridVitals);
 
   vitalSVG
@@ -346,7 +345,7 @@ function drawCharts() {
   vitalSVG
     .append("g")
     .attr("class", "x axis")
-    .attr("transform", `translate(0, ${chartHeight})`)
+    .attr("transform", `translate(0, ${vitalChartHeight})`)
     .call(xAxisVitals);
 
   vitalSVG
@@ -360,7 +359,7 @@ function drawCharts() {
     .attr("class", "x label")
     .attr("text-anchor", "end")
     .attr("x", chartWidth)
-    .attr("y", chartHeight + margin.bottom - 5)
+    .attr("y", vitalChartHeight + margin.bottom - 5)
     .text("Time (MM:SS)");
 
   vitalSVG
@@ -400,7 +399,7 @@ function drawCharts() {
     .attr("x", -margin.left + 5)
     .attr("y", -margin.top + 5)
     .attr("width", chartWidth + margin.left + margin.right - 10)
-    .attr("height", chartHeight + margin.top + margin.bottom - 10)
+    .attr("height", vitalChartHeight + margin.top + margin.bottom - 10)
     .attr("fill", "none")
     .attr("stroke", "#000")
     .attr("stroke-width", 2);
@@ -483,11 +482,16 @@ function drawCharts() {
 }
 
 // --------------------------------------------
-// UPDATE CHARTS FOR A GIVEN WINDOW START TIME
+// UPDATE CHARTS FOR A GIVEN WINDOW [startTime, startTime + WINDOW_SIZE]
+//
+//  • Filters every series to that 600‐second window
+//  • Redraws axes, gridlines
+//  • Updates each <path> to only those (time, value) points
+//  • Updates “live values” to the last point at or before windowEnd
+//  • Moves the slider handle to windowStart
 // --------------------------------------------
 
 function updateCharts(startTime) {
-  // Determine the window range
   const windowStart = startTime;
   const windowEnd = startTime + WINDOW_SIZE;
 
@@ -506,10 +510,11 @@ function updateCharts(startTime) {
   interSVG.select(".x.grid").call(xGridInter);
   interSVG.select(".y.grid").call(yGridInter);
 
-  // Update each vital’s path (filter to [windowStart, windowEnd])
+  // Update each vital’s line (filter to [windowStart, windowEnd])
   currentVitals.forEach((d) => {
     const filtered = d.values.filter(v => v.time >= windowStart && v.time <= windowEnd);
-    const lineGen = d3.line()
+    const lineGen = d3
+      .line()
       .x(v => xScaleVitals(v.time))
       .y(v => yScaleVitals(v.value))
       .curve(d3.curveMonotoneX);
@@ -520,10 +525,11 @@ function updateCharts(startTime) {
       .attr("d", lineGen);
   });
 
-  // Update each intervention’s path
+  // Update each intervention’s line
   currentInters.forEach((d) => {
     const filtered = d.values.filter(v => v.time >= windowStart && v.time <= windowEnd);
-    const lineGen = d3.line()
+    const lineGen = d3
+      .line()
       .x(v => xScaleInter(v.time))
       .y(v => yScaleInter(v.value))
       .curve(d3.curveStepAfter);
@@ -534,7 +540,7 @@ function updateCharts(startTime) {
       .attr("d", lineGen);
   });
 
-  // Update live values: last data point at or before windowEnd
+  // Update live values (the last data point at or before windowEnd)
   currentVitals.forEach((d) => {
     const upToWindow = d.values.filter(v => v.time <= windowEnd);
     const lastPoint = upToWindow.length ? upToWindow[upToWindow.length - 1] : null;
@@ -549,7 +555,7 @@ function updateCharts(startTime) {
     d3.select(`#live-inter-${sanitizeParam(d.param)}`).text(`${d.param}: ${text}`);
   });
 
-  // Move slider thumb without re-triggering the "input" event
+  // Move slider handle without re-triggering “input”
   slider.property("value", windowStart);
 }
 
@@ -560,6 +566,10 @@ function updateCharts(startTime) {
 playBtn.on("click", () => {
   if (playInterval) return; // Already playing
 
+  // Disable Play, enable Pause
+  playBtn.property("disabled", true);
+  pauseBtn.property("disabled", false);
+
   playInterval = setInterval(() => {
     currentTime += playSpeed;
     if (currentTime > duration - WINDOW_SIZE) {
@@ -567,7 +577,7 @@ playBtn.on("click", () => {
       stopAnimation();
     }
     updateCharts(currentTime);
-  }, 1000); // Tick every 1000ms
+  }, 1000); // Tick every second
 });
 
 pauseBtn.on("click", () => {
@@ -575,11 +585,11 @@ pauseBtn.on("click", () => {
 });
 
 speedBtn.on("click", () => {
-  // Toggle between 1× and 5×
+  // Toggle between 1× and 5× speed
   playSpeed = playSpeed === NORMAL_SPEED ? FAST_SPEED : NORMAL_SPEED;
   speedBtn.text(`⚡ Speed ${playSpeed}x`);
 
-  // If already playing, restart the interval at new speed
+  // If currently playing, restart interval at new speed
   if (playInterval) {
     stopAnimation();
     playBtn.dispatch("click");
@@ -591,4 +601,7 @@ function stopAnimation() {
     clearInterval(playInterval);
     playInterval = null;
   }
+  // Re-enable Play, disable Pause
+  playBtn.property("disabled", false);
+  pauseBtn.property("disabled", true);
 }

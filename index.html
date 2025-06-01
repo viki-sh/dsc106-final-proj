@@ -15,39 +15,39 @@
     <div id="ekg-border">
 
       <!-- -----------------------------
-           Case selector & Buttons
-           ----------------------------- -->
-      <div id="case-selector">
-        <label for="case-select">Select Case ID:</label>
-        <select id="case-select">
-          <!-- Populated dynamically by script.js -->
-        </select>
-      </div>
-
-      <div id="buttons">
-        <button id="play-button">▶️ Play</button>
-        <button id="pause-button" disabled>⏸ Pause</button>
-        <button id="speed-button">⚡ Speed</button>
-      </div>
-
-      <!-- -----------------------------
            Chart area (Vitals & Interventions)
            ----------------------------- -->
-      <div id="chart-area">
-        <div id="vitals-chart"></div>
-        <div id="interventions-chart"></div>
+      <div id="charts-wrapper">
+        <div id="vital-chart"></div>
+        <div id="intervention-chart"></div>
       </div>
 
       <!-- -----------------------------
-           Time slider (0 → duration – 600)
+           Sidebar: Buttons / Slider / Legend / Live Values / Case Selector
            ----------------------------- -->
-      <input type="range" id="time-slider" min="0" max="0" step="1" value="0" />
+      <div id="sidebar">
+        <!-- Buttons -->
+        <button id="play-btn">▶️ Play</button>
+        <button id="pause-btn" disabled>⏸ Pause</button>
+        <button id="speed-btn">⚡ Speed</button>
 
-      <!-- -----------------------------
-           Legend & Live-Values Sidebar
-           ----------------------------- -->
-      <div id="legend"></div>
-      <div id="live-values"></div>
+        <!-- Slider -->
+        <input type="range" id="time-slider" min="0" max="0" step="1" value="0" />
+
+        <!-- Legend -->
+        <div id="legend"></div>
+
+        <!-- Live Values -->
+        <div id="live-values"></div>
+
+        <!-- Case selector dropdown -->
+        <div id="case-selector">
+          <label for="case-select">Select Case ID:</label>
+          <select id="case-select">
+            <!-- Populated dynamically by script.js -->
+          </select>
+        </div>
+      </div>
     </div>
   </div>
 
