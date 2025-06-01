@@ -3,55 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <title>Vitals &amp; Interventions Time-Lapse</title>
-  <!-- Link to our custom CSS -->
   <link rel="stylesheet" href="styles.css" />
-  <!-- D3 v7 -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 
 <body>
   <div id="container">
-    <!-- Outer border to mimic an EKG monitor -->
     <div id="ekg-border">
-
-      <!-- -----------------------------
-           Chart area (Vitals & Interventions)
-           ----------------------------- -->
       <div id="charts-wrapper">
+
+        <div id="upper-controls">
+          <div id="case-selector">
+            <label for="case-select">Select Case ID:</label>
+            <select id="case-select">
+            </select>
+          </div>
+          <input type="range" id="time-slider" min="0" max="0" step="1" value="0" />
+        </div>
+
         <div id="vital-chart"></div>
+
         <div id="intervention-chart"></div>
       </div>
 
-      <!-- -----------------------------
-           Sidebar: Buttons / Slider / Legend / Live Values / Case Selector
-           ----------------------------- -->
       <div id="sidebar">
-        <!-- Buttons -->
         <button id="play-btn">▶️ Play</button>
         <button id="pause-btn" disabled>⏸ Pause</button>
-        <button id="speed-btn">⚡ Speed</button>
 
-        <!-- Slider -->
-        <input type="range" id="time-slider" min="0" max="0" step="1" value="0" />
-
-        <!-- Legend -->
         <div id="legend"></div>
-
-        <!-- Live Values -->
         <div id="live-values"></div>
-
-        <!-- Case selector dropdown -->
-        <div id="case-selector">
-          <label for="case-select">Select Case ID:</label>
-          <select id="case-select">
-            <!-- Populated dynamically by script.js -->
-          </select>
-        </div>
       </div>
     </div>
   </div>
 
-  <!-- Our custom JS to power everything -->
   <script src="script.js"></script>
 </body>
 </html>
